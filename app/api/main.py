@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.db.session import Base, engine, get_db
+from app.db.session import get_db
 from app.models import JobStatus, JobType, TTSJob, TrainJob, Voice, VoiceProfile, VoiceSample
 from app.schemas.api import JobOut, PreviewRequest, ProfileOut, SimpleJobResponse, TTSRequest, TrainRequest, VoiceCreateResponse, VoiceOut
 from app.services.audio.processing import ffmpeg_normalize, trim_and_loudnorm
@@ -19,7 +19,6 @@ app = FastAPI(title='Voice AI API')
 
 @app.on_event('startup')
 def startup() -> None:
-    Base.metadata.create_all(bind=engine)
     for p in [settings.uploads_dir, settings.voices_dir, settings.profiles_dir, settings.jobs_dir, settings.outputs_dir, settings.models_dir]:
         Path(p).mkdir(parents=True, exist_ok=True)
 
