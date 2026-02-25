@@ -3,7 +3,6 @@ import uuid
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -12,7 +11,7 @@ from app.models import JobStatus, JobType, TTSJob, TrainJob, Voice, VoiceProfile
 from app.schemas.api import JobOut, PreviewRequest, ProfileOut, SimpleJobResponse, TTSRequest, TrainRequest, VoiceCreateResponse, VoiceOut
 from app.services.audio.processing import ffmpeg_normalize, trim_and_loudnorm
 from app.services.repository import list_jobs, list_profiles, list_voices
-from app.workers.tasks import run_preview, run_train, run_tts
+from app.workers.celery_app import celery_app
 
 settings = get_settings()
 app = FastAPI(title='Voice AI API')
@@ -81,7 +80,7 @@ def preview_voice(voice_id: str, req: PreviewRequest, db: Session = Depends(get_
     job = TTSJob(type=JobType.preview, status=JobStatus.pending, input_params={'voice_id': voice_id, 'text': req.text})
     db.add(job)
     db.commit()
-    run_preview.delay(job.id, voice_id, req.text)
+    celery_app.send_task('app.workers.tasks.run_preview', args=[job.id, voice_id, req.text])
     return SimpleJobResponse(job_id=job.id, status='pending')
 
 
@@ -92,7 +91,7 @@ def train_voice(voice_id: str, req: TrainRequest, db: Session = Depends(get_db))
     job = TrainJob(type=JobType.train, status=JobStatus.pending, input_params={'voice_id': voice_id, 'profile_name': req.profile_name})
     db.add(job)
     db.commit()
-    run_train.delay(job.id, voice_id, req.profile_name)
+    celery_app.send_task('app.workers.tasks.run_train', args=[job.id, voice_id, req.profile_name])
     return SimpleJobResponse(job_id=job.id, status='pending')
 
 
@@ -111,7 +110,7 @@ def tts(req: TTSRequest, db: Session = Depends(get_db)):
     job = TTSJob(type=JobType.tts, status=JobStatus.pending, input_params=payload)
     db.add(job)
     db.commit()
-    run_tts.delay(job.id, payload)
+    celery_app.send_task('app.workers.tasks.run_tts', args=[job.id, payload])
     return SimpleJobResponse(job_id=job.id, status='pending')
 
 

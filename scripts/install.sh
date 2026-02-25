@@ -77,6 +77,15 @@ systemctl daemon-reload
 systemctl enable --now voice-api.service voice-worker-preview.service voice-worker-train.service voice-worker-render.service voice-gradio.service
 
 log "Smoke test"
-sleep 3
-curl -fsS http://127.0.0.1:8000/health >/dev/null
-log "Install completed"
+for i in {1..30}; do
+  if curl -fsS http://127.0.0.1:8000/health >/dev/null; then
+    log "Install completed"
+    exit 0
+  fi
+  sleep 1
+done
+
+log "voice-api did not become healthy in time"
+systemctl --no-pager --full status voice-api.service || true
+journalctl -u voice-api.service -n 100 --no-pager || true
+exit 1
