@@ -54,6 +54,12 @@ systemctl enable --now postgresql redis-server
 sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='voiceai'" | grep -q 1 || sudo -u postgres psql -c "CREATE USER voiceai WITH PASSWORD 'voiceai';"
 sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='voiceai'" | grep -q 1 || sudo -u postgres createdb -O voiceai voiceai
 sudo -u postgres psql -d voiceai -f /opt/voice-ai/app/sql/init.sql
+sudo -u postgres psql -d voiceai -c "ALTER SCHEMA public OWNER TO voiceai;"
+sudo -u postgres psql -d voiceai -c "GRANT ALL ON SCHEMA public TO voiceai;"
+sudo -u postgres psql -d voiceai -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO voiceai;"
+sudo -u postgres psql -d voiceai -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO voiceai;"
+sudo -u postgres psql -d voiceai -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO voiceai;"
+sudo -u postgres psql -d voiceai -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO voiceai;"
 
 log "Building virtualenv"
 if [[ ! -d /opt/voice-ai/.venv ]]; then

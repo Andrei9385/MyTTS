@@ -7,25 +7,48 @@ import requests
 API = 'http://127.0.0.1:8000'
 
 
+def _parse_response(resp: requests.Response) -> dict:
+    try:
+        payload = resp.json()
+        if isinstance(payload, dict):
+            return payload
+        return {'status_code': resp.status_code, 'data': payload}
+    except Exception:
+        return {
+            'status_code': resp.status_code,
+            'error': 'non_json_response',
+            'text': resp.text[:3000],
+        }
+
+
 def create_voice(name, description, files):
-    files_payload = [('samples', (Path(f).name, open(f, 'rb'))) for f in files]
-    r = requests.post(f'{API}/v1/voices', data={'name': name, 'description': description}, files=files_payload, timeout=120)
-    return r.json()
+    files_payload = []
+    handles = []
+    try:
+        for f in files:
+            handle = open(f, 'rb')
+            handles.append(handle)
+            files_payload.append(('samples', (Path(f).name, handle)))
+        r = requests.post(f'{API}/v1/voices', data={'name': name, 'description': description}, files=files_payload, timeout=120)
+        return _parse_response(r)
+    finally:
+        for h in handles:
+            h.close()
 
 
 def run_preview(voice_id, text):
     r = requests.post(f'{API}/v1/voices/{voice_id}/preview', json={'text': text}, timeout=60)
-    return r.json()
+    return _parse_response(r)
 
 
 def run_train(voice_id, profile_name):
     r = requests.post(f'{API}/v1/voices/{voice_id}/train', json={'profile_name': profile_name}, timeout=60)
-    return r.json()
+    return _parse_response(r)
 
 
 def list_profiles(voice_id):
     r = requests.get(f'{API}/v1/voices/{voice_id}/profiles', timeout=30)
-    return json.dumps(r.json(), ensure_ascii=False, indent=2)
+    return json.dumps(_parse_response(r), ensure_ascii=False, indent=2)
 
 
 def run_tts(voice_id, profile_id, text, mode, fmt, speed, use_acc, use_ovr):
@@ -40,12 +63,12 @@ def run_tts(voice_id, profile_id, text, mode, fmt, speed, use_acc, use_ovr):
         'use_user_overrides': use_ovr,
     }
     r = requests.post(f'{API}/v1/tts', json=payload, timeout=60)
-    return r.json()
+    return _parse_response(r)
 
 
 def get_job(job_id):
     r = requests.get(f'{API}/v1/jobs/{job_id}', timeout=30)
-    return json.dumps(r.json(), ensure_ascii=False, indent=2)
+    return json.dumps(_parse_response(r), ensure_ascii=False, indent=2)
 
 
 with gr.Blocks(title='Voice AI') as demo:
