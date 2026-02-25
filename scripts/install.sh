@@ -135,7 +135,9 @@ install -m 0644 /opt/voice-ai/app/systemd/voice-worker-render.service /etc/syste
 install -m 0644 /opt/voice-ai/app/systemd/voice-gradio.service /etc/systemd/system/voice-gradio.service
 
 systemctl daemon-reload
-systemctl enable --now voice-api.service voice-worker-preview.service voice-worker-train.service voice-worker-render.service voice-gradio.service
+systemctl enable voice-api.service voice-worker-preview.service voice-worker-train.service voice-worker-render.service voice-gradio.service
+# Force restart to ensure a running old process (e.g. stale venv/python path) is replaced with the newly deployed build
+systemctl restart voice-api.service voice-worker-preview.service voice-worker-train.service voice-worker-render.service voice-gradio.service
 
 # quick early diagnostic if API failed hard
 if ! systemctl is-active --quiet voice-api.service; then
