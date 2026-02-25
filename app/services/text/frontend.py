@@ -11,6 +11,14 @@ class RussianTextFrontend:
         self.overrides_path = overrides_path
         self.overrides = self._load_overrides()
 
+    def reload_overrides(self) -> None:
+        """Reload overrides from disk so API updates apply without worker restart."""
+        try:
+            self.overrides = self._load_overrides()
+        except Exception:
+            # Keep previously loaded overrides if file is temporarily invalid.
+            pass
+
     @staticmethod
     def _build_accenter():
         # ruaccent package changed API across versions; keep workers bootable on both
@@ -116,6 +124,7 @@ class RussianTextFrontend:
         use_user_overrides: bool,
         accent_mode: str = 'auto_plus_overrides',
     ) -> str:
+        self.reload_overrides()
         text = self._normalize_numbers(text)
         text = self._normalize_abbr(text)
         text = re.sub(r'\s+', ' ', text).strip()
@@ -126,3 +135,9 @@ class RussianTextFrontend:
         if use_accenting:
             text = self.apply_accents(text, use_user_overrides=use_user_overrides)
         return text
+
+    @staticmethod
+    def to_tts_stress_format(text: str) -> str:
+        """Convert combining-acute stress marks to XTTS-friendly +stress markers."""
+        converted = re.sub(r'([А-Яа-яЁё])\u0301', r'+\1', text)
+        return converted.replace('́', '')

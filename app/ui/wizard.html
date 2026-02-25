@@ -327,8 +327,13 @@ function removeSample(idx){sampleQueue.splice(idx,1); renderSampleList();}
 async function api(url,opt){let r=await fetch(url,opt);let text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch{data={detail:text||'invalid response'}};if(!r.ok){throw new Error(data.error_text||data.detail||`HTTP ${r.status}`);}return data;}
 function renderPreparedText(job){
   const prepared=(job.input_params&&job.input_params.prepared_text)||'';
+  const backend=(job.input_params&&job.input_params.backend_text)||'';
   if(prepared){
-    setOut('prepared_text_out', 'Подготовленный текст (после правил ударений):\n'+prepared);
+    let txt='Подготовленный текст (после правил ударений):\n'+prepared;
+    if(backend && backend!==prepared){
+      txt += '\n\nТекст, отправленный в XTTS (+ударения):\n'+backend;
+    }
+    setOut('prepared_text_out', txt);
   }
 }
 async function loadSession(){
