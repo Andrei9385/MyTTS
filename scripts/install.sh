@@ -81,6 +81,7 @@ PYTHONPATH=/opt/voice-ai/app /opt/voice-ai/.venv/bin/python - <<'PY'
 import importlib
 importlib.import_module('app.models.entities')
 importlib.import_module('app.api.main')
+importlib.import_module('app.workers.tasks')
 print('preflight import ok')
 PY
 

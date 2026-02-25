@@ -3,16 +3,38 @@ import re
 from pathlib import Path
 
 import pymorphy2
-from ruaccent import RUAccent
 
 
 class RussianTextFrontend:
     def __init__(self, overrides_path: str):
         self.morph = pymorphy2.MorphAnalyzer()
-        self.accenter = RUAccent()
-        self.accenter.load(omograph_model_size='turbo3', use_dictionary=True)
+        self._accent_callable = self._build_accenter()
         self.overrides_path = overrides_path
         self.overrides = self._load_overrides()
+
+    @staticmethod
+    def _build_accenter():
+        # ruaccent package changed API across versions; keep workers bootable on both
+        try:
+            from ruaccent import RUAccent  # old API
+
+            accenter = RUAccent()
+            accenter.load(omograph_model_size='turbo3', use_dictionary=True)
+            return accenter.process_all
+        except Exception:
+            pass
+
+        try:
+            import ruaccent  # newer APIs may expose module-level helpers
+
+            if hasattr(ruaccent, 'accentize'):
+                return getattr(ruaccent, 'accentize')
+            if hasattr(ruaccent, 'process_all'):
+                return getattr(ruaccent, 'process_all')
+        except Exception:
+            pass
+
+        return None
 
     def _load_overrides(self) -> dict[str, str]:
         path = Path(self.overrides_path)
@@ -62,7 +84,12 @@ class RussianTextFrontend:
                 continue
             out.append(token)
         joined = ''.join(out)
-        return self.accenter.process_all(joined)
+        if self._accent_callable is None:
+            return joined
+        try:
+            return self._accent_callable(joined)
+        except Exception:
+            return joined
 
     def preprocess(self, text: str, use_accenting: bool, use_user_overrides: bool) -> str:
         text = self._normalize_numbers(text)
