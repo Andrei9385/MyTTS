@@ -344,10 +344,14 @@ function addSelectedFiles(){
 function removeSample(idx){sampleQueue.splice(idx,1); renderSampleList();}
 async function api(url,opt){let r=await fetch(url,opt);let text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch{data={detail:text||'invalid response'}};if(!r.ok){throw new Error(data.error_text||data.detail||`HTTP ${r.status}`);}return data;}
 function renderPreparedText(job){
+  const decoded=(job.input_params&&job.input_params.decoded_phoneme_text)||'';
   const prepared=(job.input_params&&job.input_params.prepared_text)||'';
   const backend=(job.input_params&&job.input_params.backend_text)||'';
   if(prepared){
     let txt='Подготовленный текст (после правил ударений):\n'+prepared;
+    if(decoded){
+      txt = 'Декодировано из фонем:\n'+decoded+'\n\n'+txt;
+    }
     if(backend && backend!==prepared){
       txt += '\n\nТекст, отправленный в XTTS (+ударения):\n'+backend;
     }

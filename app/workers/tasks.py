@@ -51,7 +51,15 @@ def run_preview(self, job_id: str, payload: dict):
         if input_mode == 'phoneme':
             if not payload.get('phoneme_text'):
                 raise RuntimeError('phoneme_text is required when input_mode=phoneme')
-            prepared = frontend.phonemes_to_text(payload['phoneme_text'])
+            decoded_text = frontend.phonemes_to_text(payload['phoneme_text'])
+            # Even in phoneme mode, keep accent pipeline active so user overrides
+            # and manual stress settings from UI are not silently ignored.
+            prepared = frontend.preprocess(
+                decoded_text,
+                payload.get('use_accenting', True),
+                payload.get('use_user_overrides', True),
+                payload.get('accent_mode', 'auto_plus_overrides'),
+            )
         else:
             prepared = frontend.preprocess(
                 payload['text'],
@@ -64,6 +72,7 @@ def run_preview(self, job_id: str, payload: dict):
         job.input_params = {
             **(job.input_params or {}),
             'input_mode': input_mode,
+            'decoded_phoneme_text': decoded_text if input_mode == 'phoneme' else None,
             'prepared_text': prepared,
             'backend_text': backend_text,
             'stress_hint_mode': stress_hint_mode,
@@ -146,7 +155,13 @@ def run_tts(self, job_id: str, payload: dict):
         if input_mode == 'phoneme':
             if not payload.get('phoneme_text'):
                 raise RuntimeError('phoneme_text is required when input_mode=phoneme')
-            prepared = frontend.phonemes_to_text(payload['phoneme_text'])
+            decoded_text = frontend.phonemes_to_text(payload['phoneme_text'])
+            prepared = frontend.preprocess(
+                decoded_text,
+                payload['use_accenting'],
+                payload['use_user_overrides'],
+                payload.get('accent_mode', 'auto_plus_overrides'),
+            )
         else:
             prepared = frontend.preprocess(
                 payload['text'],
@@ -159,6 +174,7 @@ def run_tts(self, job_id: str, payload: dict):
         job.input_params = {
             **(job.input_params or {}),
             'input_mode': input_mode,
+            'decoded_phoneme_text': decoded_text if input_mode == 'phoneme' else None,
             'prepared_text': prepared,
             'backend_text': backend_text,
             'stress_hint_mode': stress_hint_mode,
