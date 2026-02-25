@@ -2,12 +2,11 @@ import json
 import re
 from pathlib import Path
 
-import pymorphy2
 
 
 class RussianTextFrontend:
     def __init__(self, overrides_path: str):
-        self.morph = pymorphy2.MorphAnalyzer()
+        self.morph = None
         self._accent_callable = self._build_accenter()
         self.overrides_path = overrides_path
         self.overrides = self._load_overrides()

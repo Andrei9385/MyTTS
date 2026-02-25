@@ -13,8 +13,15 @@ from app.services.tts_backend import SileroBackend
 from app.workers.celery_app import celery_app
 
 settings = get_settings()
-_frontend = RussianTextFrontend(settings.accent_overrides_path)
+_frontend = None
 _tts = None
+
+
+def _get_frontend():
+    global _frontend
+    if _frontend is None:
+        _frontend = RussianTextFrontend(settings.accent_overrides_path)
+    return _frontend
 
 
 def _get_tts():
@@ -119,8 +126,9 @@ def run_tts(self, job_id: str, payload: dict):
             profile = db.get(VoiceProfile, payload['profile_id'])
             profile_params = profile.params if profile else None
 
-        prepared = _frontend.preprocess(payload['text'], payload['use_accenting'], payload['use_user_overrides'])
-        parts = _frontend.split_poem(prepared) if payload['mode'] == 'poem' else _frontend.split_story(prepared)
+        frontend = _get_frontend()
+        prepared = frontend.preprocess(payload['text'], payload['use_accenting'], payload['use_user_overrides'])
+        parts = frontend.split_poem(prepared) if payload['mode'] == 'poem' else frontend.split_story(prepared)
 
         out_dir = Path(settings.jobs_dir) / job_id
         out_dir.mkdir(parents=True, exist_ok=True)
