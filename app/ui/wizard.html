@@ -328,8 +328,7 @@ async function api(url,opt){let r=await fetch(url,opt);let text=await r.text();l
 function renderPreparedText(job){
   const prepared=(job.input_params&&job.input_params.prepared_text)||'';
   if(prepared){
-    setOut('prepared_text_out', 'Подготовленный текст (после правил ударений):
-'+prepared);
+    setOut('prepared_text_out', 'Подготовленный текст (после правил ударений):\n'+prepared);
   }
 }
 async function loadSession(){
