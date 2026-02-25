@@ -226,6 +226,15 @@
       <p class="subtitle">Вставьте текст и задайте параметры. Можно синтезировать стих, сказку или любой другой текст.</p>
       <textarea class="field" id="ttstext" rows="8" placeholder="Вставьте ваш текст для озвучки"></textarea>
       <div class="row">
+        <label>Режим входа</label>
+        <select class="field" id="input_mode" style="max-width:220px">
+          <option value="text">Обычный текст</option>
+          <option value="phoneme">Фонемный (эксперимент)</option>
+        </select>
+        <button class="btn btn-ghost" onclick="buildPhonemes()">Сделать G2P из текста</button>
+      </div>
+      <textarea class="field" id="phoneme_text" rows="5" placeholder="Фонемы (редактируемый поток токенов, разделённых пробелами)"></textarea>
+      <div class="row">
         <label>Режим</label>
         <select class="field" id="mode" style="max-width:180px"><option value="story">story (проза)</option><option value="poem">poem (стих)</option></select>
         <label>Формат</label>
@@ -301,7 +310,7 @@
 </main>
 
 <script>
-let st={session_id:null,current_step:1,selected_voice_id:null,selected_profile_id:null,active_preview_job_id:null,active_train_job_id:null,active_tts_job_id:null,preview_done:false,train_done:false,tts_done:false,preview_audio_url:null,tts_audio_url:null,last_error:null};
+let st={session_id:null,current_step:1,selected_voice_id:null,selected_profile_id:null,active_preview_job_id:null,active_train_job_id:null,active_tts_job_id:null,preview_done:false,train_done:false,tts_done:false,preview_audio_url:null,tts_audio_url:null,last_error:null,input_mode:'text',phoneme_text_draft:''};
 let sampleQueue=[];
 function qs(id){return document.getElementById(id)}
 function go(n){st.current_step=n; saveSession(); render();}
@@ -353,6 +362,8 @@ async function loadSession(){
   st.session_id=st.id||st.session_id;
   if(st.preview_text_draft)qs('preview_text').value=st.preview_text_draft;
   if(st.tts_text_draft)qs('ttstext').value=st.tts_text_draft;
+  if(st.phoneme_text_draft)qs('phoneme_text').value=st.phoneme_text_draft;
+  if(st.input_mode)qs('input_mode').value=st.input_mode;
   if(st.mode)qs('mode').value=st.mode;
   if(st.format)qs('fmt').value=st.format;
   if(st.speed)qs('speed').value=st.speed;
@@ -369,6 +380,12 @@ result=${st.tts_audio_url}`);}
   render(); renderSampleList();
 }
 async function saveSession(extra={}){st={...st,...extra}; await api('/v1/ui/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(st)}); localStorage.setItem('session_id',st.session_id||st.id||'');}
+async function buildPhonemes(){
+  try{
+    let j=await api('/v1/g2p',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:qs('ttstext').value})});
+    qs('phoneme_text').value=j.phoneme_text||'';
+  }catch(e){setOut('s4o',e.message,true);}
+}
 async function createVoice(){try{const files=sampleQueue.length?sampleQueue:Array.from(qs('samples').files||[]); if(!files.length) throw new Error('Добавьте хотя бы один аудиофайл. Лучше 3–10.'); const fd=new FormData(); fd.append('name',qs('vname').value||'my-voice'); fd.append('description','wizard'); for(const f of files)fd.append('samples',f); let r=await fetch('/v1/voices',{method:'POST',body:fd}); let txt=await r.text(); let j={}; try{j=txt?JSON.parse(txt):{};}catch{j={detail:txt||'invalid response'}}; if(!r.ok)throw new Error(j.detail||j.error_text||`HTTP ${r.status}`); st.selected_voice_id=j.voice_id; setOut('s1o',JSON.stringify(j,null,2)); qs('n1').disabled=false; await saveSession({selected_voice_id:j.voice_id,current_step:1,last_error:null});}catch(e){setOut('s1o',e.message,true);}}
 async function preview(){
   try{
@@ -387,8 +404,8 @@ async function preview(){
 }
 async function train(){try{let j=await api(`/v1/voices/${st.selected_voice_id}/train`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile_name:qs('pname').value})}); setOut('s3o',JSON.stringify(j,null,2)); await saveSession({active_train_job_id:j.job_id,last_error:null}); poll(j.job_id,'3');}catch(e){setOut('s3o',e.message,true);}}
 async function renderTTS(){
-  let payload={voice_id:st.selected_voice_id,profile_id:st.selected_profile_id,text:qs('ttstext').value,mode:qs('mode').value,format:qs('fmt').value,speed:parseFloat(qs('speed').value),use_accenting:qs('acc').checked,use_user_overrides:qs('ovr').checked,accent_mode:qs('accent_mode').value,stress_hint_mode:qs('stress_hint_mode').value};
-  try{let j=await api('/v1/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); setOut('s4o',JSON.stringify(j,null,2)); setOut('prepared_text_out',''); await saveSession({active_tts_job_id:j.job_id,tts_text_draft:payload.text,mode:payload.mode,format:payload.format,speed:payload.speed,use_accenting:payload.use_accenting,use_user_overrides:payload.use_user_overrides,last_error:null}); poll(j.job_id,'4');}catch(e){setOut('s4o',e.message,true);}}
+  let payload={voice_id:st.selected_voice_id,profile_id:st.selected_profile_id,text:qs('ttstext').value,mode:qs('mode').value,format:qs('fmt').value,speed:parseFloat(qs('speed').value),use_accenting:qs('acc').checked,use_user_overrides:qs('ovr').checked,accent_mode:qs('accent_mode').value,stress_hint_mode:qs('stress_hint_mode').value,input_mode:qs('input_mode').value,phoneme_text:qs('phoneme_text').value};
+  try{let j=await api('/v1/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); setOut('s4o',JSON.stringify(j,null,2)); setOut('prepared_text_out',''); await saveSession({active_tts_job_id:j.job_id,tts_text_draft:payload.text,phoneme_text_draft:payload.phoneme_text,input_mode:payload.input_mode,mode:payload.mode,format:payload.format,speed:payload.speed,use_accenting:payload.use_accenting,use_user_overrides:payload.use_user_overrides,last_error:null}); poll(j.job_id,'4');}catch(e){setOut('s4o',e.message,true);}}
 async function poll(jobId,step){let timer=setInterval(async()=>{try{let j=await api('/v1/jobs/'+jobId); qs('p'+step).style.width=(j.progress||0)+'%'; if(j.status==='done'){clearInterval(timer); if(step==='2'){const url='/media/outputs/'+jobId+'.wav'; qs('a2').src=url; qs('n2').disabled=false; await saveSession({active_preview_job_id:null,preview_done:true,preview_audio_url:url,last_error:null});}
 if(step==='3'){let p=await api(`/v1/voices/${st.selected_voice_id}/profiles`); if(p.length){st.selected_profile_id=p[p.length-1].id; await saveSession({selected_profile_id:st.selected_profile_id,active_train_job_id:null,train_done:true,last_error:null}); qs('n3').disabled=false;}}
 if(step==='4'){let ext=qs('fmt').value; const url='/media/outputs/'+jobId+'.'+ext; qs('a4').src=url; qs('n4').disabled=false; renderPreparedText(j); setOut('sum',`voice=${st.selected_voice_id}

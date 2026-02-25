@@ -12,14 +12,16 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.db.session import get_db
 from app.models import JobStatus, JobType, TTSJob, TrainJob, UISession, Voice, VoiceProfile, VoiceSample
-from app.schemas.api import JobOut, PreviewRequest, ProfileOut, SimpleJobResponse, TTSRequest, TrainRequest, UISessionPayload, VoiceCreateResponse, VoiceOut
+from app.schemas.api import G2PRequest, G2PResponse, JobOut, PreviewRequest, ProfileOut, SimpleJobResponse, TTSRequest, TrainRequest, UISessionPayload, VoiceCreateResponse, VoiceOut
 from app.services.audio.processing import ffmpeg_normalize, trim_and_loudnorm
+from app.services.text.frontend import RussianTextFrontend
 from app.services.repository import list_jobs, list_profiles, list_voices
 from app.workers.celery_app import celery_app
 
 settings = get_settings()
 app = FastAPI(title='Voice AI API (XTTS)')
 app.mount('/media', StaticFiles(directory=settings.data_root), name='media')
+_g2p_frontend = RussianTextFrontend(settings.accent_overrides_path)
 
 
 @app.on_event('startup')
@@ -36,6 +38,12 @@ def wizard_ui():
 @app.get('/health')
 def health():
     return {'status': 'ok', 'backend': 'xtts_v2'}
+
+
+@app.post('/v1/g2p', response_model=G2PResponse)
+def g2p(req: G2PRequest):
+    phoneme_text = _g2p_frontend.text_to_phonemes(req.text)
+    return G2PResponse(source_text=req.text, phoneme_text=phoneme_text)
 
 
 def _get_or_create_ui_session(db: Session, session_id: str | None) -> UISession:

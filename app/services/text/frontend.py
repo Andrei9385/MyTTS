@@ -5,6 +5,14 @@ from pathlib import Path
 
 
 class RussianTextFrontend:
+    _G2P_CHAR_TO_TOKEN = {
+        'а': 'A', 'б': 'B', 'в': 'V', 'г': 'G', 'д': 'D', 'е': 'E', 'ё': 'YO', 'ж': 'ZH', 'з': 'Z',
+        'и': 'I', 'й': 'J', 'к': 'K', 'л': 'L', 'м': 'M', 'н': 'N', 'о': 'O', 'п': 'P', 'р': 'R',
+        'с': 'S', 'т': 'T', 'у': 'U', 'ф': 'F', 'х': 'H', 'ц': 'TS', 'ч': 'CH', 'ш': 'SH',
+        'щ': 'SCH', 'ъ': 'HARD', 'ы': 'Y', 'ь': 'SOFT', 'э': 'EH', 'ю': 'YU', 'я': 'YA',
+    }
+    _G2P_TOKEN_TO_CHAR = {v: k for k, v in _G2P_CHAR_TO_TOKEN.items()}
+
     def __init__(self, overrides_path: str):
         self.morph = None
         self._accent_callable = self._build_accenter()
@@ -145,4 +153,57 @@ class RussianTextFrontend:
             return re.sub(r'([А-Яа-яЁё])\u0301', lambda m: f'+{m.group(1)}', text).replace('́', '')
         if mode == 'plus_and_acute':
             return re.sub(r'([А-Яа-яЁё])\u0301', lambda m: f'+{m.group(1)}́', text)
+        return text
+
+    def text_to_phonemes(self, text: str) -> str:
+        """Experimental G2P view for user-editable phoneme input."""
+        text = re.sub(r'\s+', ' ', text).strip()
+        out = []
+        for ch in text:
+            if ch == ' ':
+                out.append('|')
+                continue
+            if ch == '́':
+                out.append('+')
+                continue
+            low = ch.lower()
+            token = self._G2P_CHAR_TO_TOKEN.get(low)
+            if token is None:
+                out.append(ch)
+            else:
+                out.append(token if ch.islower() else token)
+        return ' '.join(out)
+
+    def phonemes_to_text(self, phoneme_text: str) -> str:
+        """Inverse transform for editable phoneme stream back to Russian text."""
+        tokens = phoneme_text.split()
+        chars: list[str] = []
+        vowels = set('аеёиоуыэюя')
+        stress_next = False
+        for token in tokens:
+            if token == '|':
+                chars.append(' ')
+                stress_next = False
+                continue
+            if token == '+':
+                # accept both notations: + before or after stressed vowel token
+                if chars and chars[-1] in vowels:
+                    chars.append('́')
+                    stress_next = False
+                else:
+                    stress_next = True
+                continue
+            ch = self._G2P_TOKEN_TO_CHAR.get(token.upper())
+            if ch is None:
+                chars.append(token)
+                stress_next = False
+                continue
+            chars.append(ch)
+            if stress_next and ch in vowels:
+                chars.append('́')
+            stress_next = False
+
+        text = ''.join(chars)
+        text = re.sub(r'\s+([,.;:!?])', r'\1', text)
+        text = re.sub(r'([,.;:!?])(\S)', r'\1 \2', text)
         return text

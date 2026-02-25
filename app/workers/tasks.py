@@ -47,16 +47,23 @@ def run_preview(self, job_id: str, payload: dict):
         job.progress = 10
         db.commit()
         frontend = _get_frontend()
-        prepared = frontend.preprocess(
-            payload['text'],
-            payload.get('use_accenting', True),
-            payload.get('use_user_overrides', True),
-            payload.get('accent_mode', 'auto_plus_overrides'),
-        )
+        input_mode = payload.get('input_mode', 'text')
+        if input_mode == 'phoneme':
+            if not payload.get('phoneme_text'):
+                raise RuntimeError('phoneme_text is required when input_mode=phoneme')
+            prepared = frontend.phonemes_to_text(payload['phoneme_text'])
+        else:
+            prepared = frontend.preprocess(
+                payload['text'],
+                payload.get('use_accenting', True),
+                payload.get('use_user_overrides', True),
+                payload.get('accent_mode', 'auto_plus_overrides'),
+            )
         stress_hint_mode = payload.get('stress_hint_mode', 'none')
         backend_text = frontend.to_tts_stress_format(prepared, mode=stress_hint_mode)
         job.input_params = {
             **(job.input_params or {}),
+            'input_mode': input_mode,
             'prepared_text': prepared,
             'backend_text': backend_text,
             'stress_hint_mode': stress_hint_mode,
@@ -135,16 +142,23 @@ def run_tts(self, job_id: str, payload: dict):
         job.progress = 5
         db.commit()
         frontend = _get_frontend()
-        prepared = frontend.preprocess(
-            payload['text'],
-            payload['use_accenting'],
-            payload['use_user_overrides'],
-            payload.get('accent_mode', 'auto_plus_overrides'),
-        )
+        input_mode = payload.get('input_mode', 'text')
+        if input_mode == 'phoneme':
+            if not payload.get('phoneme_text'):
+                raise RuntimeError('phoneme_text is required when input_mode=phoneme')
+            prepared = frontend.phonemes_to_text(payload['phoneme_text'])
+        else:
+            prepared = frontend.preprocess(
+                payload['text'],
+                payload['use_accenting'],
+                payload['use_user_overrides'],
+                payload.get('accent_mode', 'auto_plus_overrides'),
+            )
         stress_hint_mode = payload.get('stress_hint_mode', 'none')
         backend_text = frontend.to_tts_stress_format(prepared, mode=stress_hint_mode)
         job.input_params = {
             **(job.input_params or {}),
+            'input_mode': input_mode,
             'prepared_text': prepared,
             'backend_text': backend_text,
             'stress_hint_mode': stress_hint_mode,

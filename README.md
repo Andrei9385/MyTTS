@@ -90,6 +90,28 @@ curl -s -X POST http://127.0.0.1:8000/v1/tts \
   }'
 ```
 
+### TTS с фонемным входом (эксперимент)
+```bash
+curl -s -X POST http://127.0.0.1:8000/v1/tts \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "voice_id": "<VOICE_ID>",
+    "text": "Жила-была Маша",
+    "input_mode": "phoneme",
+    "phoneme_text": "ZH I L A | B Y L A | M A SH A",
+    "mode": "story",
+    "format": "wav",
+    "speed": 1.0
+  }'
+```
+
+### G2P API (text -> phoneme stream)
+```bash
+curl -s -X POST http://127.0.0.1:8000/v1/g2p \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"Жила-была Маша"}'
+```
+
 ## UI
 - Wizard UI (FastAPI served): `http://127.0.0.1:8000/`
 - Legacy Gradio (optional): `http://127.0.0.1:7860`
@@ -191,10 +213,20 @@ curl -s -X POST http://127.0.0.1:8000/v1/tts \
 То есть для «гарантируемых» ударений требуется переход от text-to-wave подсказок к phoneme-driven схеме.
 
 ## План миграции (если нужен строгий контроль ударений)
-1. Добавить опциональный G2P-слой перед синтезом (`text -> phonemes+stress`).
-2. В API добавить режим `input_mode = text|phoneme`.
-3. Для `phoneme` хранить в job и UI обе формы: исходный текст и фонемную последовательность.
-4. Прогнать A/B-тесты на вашем целевом корпусе сказок (20–50 фраз) и зафиксировать стабильный движок.
+1. ✅ Добавлен опциональный G2P-слой перед синтезом (`POST /v1/g2p`: `text -> phoneme_text`).
+2. ✅ В API добавлен режим `input_mode = text|phoneme` и поле `phoneme_text`.
+3. ✅ Для `phoneme` в job/UI сохраняются обе формы: исходный text и `backend_text` после конвертации.
+4. ⏳ Прогнать A/B-тесты на целевом корпусе сказок (20–50 фраз) и зафиксировать стабильный режим.
+
+## Дообучение XTTS (экспериментальный старт)
+Добавлен вспомогательный скрипт:
+```bash
+python scripts/fine_tune_xtts.py --dataset-dir /path/to/dataset --output-dir /path/to/output
+```
+
+- Скрипт проверяет структуру датасета (`metadata.csv` + `wavs/`) и печатает команду запуска.
+- Для реального запуска добавьте `--run`.
+- Это **отдельный путь** от легковесного шага “Улучшение профиля” в Wizard.
 
 ## Локальный запуск без systemd (dev)
 ```bash

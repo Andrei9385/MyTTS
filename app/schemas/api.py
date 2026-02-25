@@ -35,6 +35,8 @@ class TTSRequest(BaseModel):
     use_user_overrides: bool = True
     accent_mode: Literal['auto_plus_overrides', 'overrides_only', 'none'] = 'auto_plus_overrides'
     stress_hint_mode: Literal['none', 'plus', 'plus_and_acute'] = 'none'
+    input_mode: Literal['text', 'phoneme'] = 'text'
+    phoneme_text: str | None = None
 
 
 class JobOut(BaseModel):
@@ -66,6 +68,15 @@ class SimpleJobResponse(BaseModel):
     status: str
 
 
+class G2PRequest(BaseModel):
+    text: str
+
+
+class G2PResponse(BaseModel):
+    source_text: str
+    phoneme_text: str
+
+
 class UISessionPayload(BaseModel):
     session_id: str | None = None
     current_step: int | None = None
@@ -73,6 +84,7 @@ class UISessionPayload(BaseModel):
     selected_profile_id: str | None = None
     preview_text_draft: str | None = None
     tts_text_draft: str | None = None
+    phoneme_text_draft: str | None = None
     mode: Literal['story', 'poem'] | None = None
     format: Literal['wav', 'mp3'] | None = None
     speed: float | None = None
