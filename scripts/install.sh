@@ -18,9 +18,13 @@ fi
 log "Installing apt packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y software-properties-common curl git ffmpeg redis-server postgresql postgresql-contrib python3-venv python3-pip
+apt-get install -y software-properties-common curl git rsync ffmpeg redis-server postgresql postgresql-contrib python3-venv python3-pip
 
 PY_BIN="python3.11"
+if ! command -v "$PY_BIN" >/dev/null 2>&1; then
+  log "Trying to install Python 3.11 for better dependency compatibility"
+  apt-get install -y python3.11 python3.11-venv || true
+fi
 if ! command -v "$PY_BIN" >/dev/null 2>&1; then
   PY_BIN="python3.12"
   apt-get install -y python3.12 python3.12-venv || true
@@ -52,7 +56,13 @@ if [[ ! -d /opt/voice-ai/.venv ]]; then
   "$PY_BIN" -m venv /opt/voice-ai/.venv
 fi
 /opt/voice-ai/.venv/bin/pip install --upgrade pip setuptools wheel
-/opt/voice-ai/.venv/bin/pip install -r /opt/voice-ai/app/requirements.txt
+
+log "Installing Python requirements"
+if ! /opt/voice-ai/.venv/bin/pip install -r /opt/voice-ai/app/requirements.txt; then
+  log "Primary dependency install failed, applying fallback for ruaccent-predictor"
+  sed -i 's/^ruaccent-predictor==.*/ruaccent-predictor>=1.1.0,<2.0.0/' /opt/voice-ai/app/requirements.txt || true
+  /opt/voice-ai/.venv/bin/pip install -r /opt/voice-ai/app/requirements.txt
+fi
 
 chown -R voiceai:voiceai /opt/voice-ai
 

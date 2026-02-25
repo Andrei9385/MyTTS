@@ -10,7 +10,7 @@
 - **Text frontend для русского**:
   - нормализация,
   - поддержка `ё`,
-  - автоударения через `ruaccent-predictor`,
+  - автоударения через `ruaccent-predictor` (ветка 1.1+/1.2+ для совместимости с Python 3.11/3.12),
   - пользовательские overrides `data/accent_overrides.json`,
   - приоритет: ручные ударения > overrides > auto predictor.
 - **Два режима чтения**:
