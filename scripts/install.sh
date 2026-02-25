@@ -78,6 +78,10 @@ sudo -u postgres psql -d voiceai -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SC
 sudo -u postgres psql -d voiceai -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO voiceai;"
 sudo -u postgres psql -d voiceai -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO voiceai;"
 
+log "Normalizing dependency pins for XTTS compatibility"
+# Ensure resolver-safe NumPy pin for TTS/gruut stack even on partially outdated checkouts
+sed -i -E 's/^numpy==2\.[0-9.]+/numpy==1.26.4/' /opt/voice-ai/app/requirements.txt || true
+
 log "Building virtualenv"
 if [[ -x /opt/voice-ai/.venv/bin/python ]]; then
   VENV_PY_VER=$(/opt/voice-ai/.venv/bin/python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
