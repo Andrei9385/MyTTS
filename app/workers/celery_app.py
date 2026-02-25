@@ -11,3 +11,6 @@ celery_app.conf.task_routes = {
     'app.workers.tasks.run_tts': {'queue': settings.celery_render_queue},
 }
 celery_app.conf.task_track_started = True
+
+# Ensure workers register task modules explicitly
+celery_app.conf.imports = ('app.workers.tasks',)
