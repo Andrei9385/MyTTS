@@ -82,6 +82,11 @@ log "Normalizing dependency pins for XTTS compatibility"
 # Ensure resolver-safe NumPy pin for TTS/gruut stack even on partially outdated checkouts
 sed -i -E 's/^numpy==2\.[0-9.]+/numpy==1.26.4/' /opt/voice-ai/app/requirements.txt || true
 
+log "Stopping existing Voice AI services before venv refresh"
+for svc in voice-api.service voice-worker-preview.service voice-worker-train.service voice-worker-render.service voice-gradio.service; do
+  systemctl stop "$svc" 2>/dev/null || true
+done
+
 log "Building virtualenv"
 if [[ -x /opt/voice-ai/.venv/bin/python ]]; then
   VENV_PY_VER=$(/opt/voice-ai/.venv/bin/python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
@@ -135,7 +140,15 @@ install -m 0644 /opt/voice-ai/app/systemd/voice-worker-render.service /etc/syste
 install -m 0644 /opt/voice-ai/app/systemd/voice-gradio.service /etc/systemd/system/voice-gradio.service
 
 systemctl daemon-reload
-systemctl enable --now voice-api.service voice-worker-preview.service voice-worker-train.service voice-worker-render.service voice-gradio.service
+systemctl enable voice-api.service voice-worker-preview.service voice-worker-train.service voice-worker-render.service voice-gradio.service
+# Force restart to ensure a running old process (e.g. stale venv/python path) is replaced with the newly deployed build
+systemctl restart voice-api.service voice-worker-preview.service voice-worker-train.service voice-worker-render.service voice-gradio.service
+
+API_PID=$(systemctl show -p MainPID --value voice-api.service || echo 0)
+if [[ "${API_PID:-0}" -gt 0 ]]; then
+  API_CMD=$(tr "\0" " " </proc/"$API_PID"/cmdline 2>/dev/null || true)
+  log "voice-api main process: ${API_CMD:-unknown}"
+fi
 
 # quick early diagnostic if API failed hard
 if ! systemctl is-active --quiet voice-api.service; then
