@@ -190,6 +190,14 @@
       <div class="hint">Если качество не нравится: вернитесь на шаг 1, добавьте/замените более чистые записи, затем повторите preview.</div>
       <textarea class="field" id="preview_text">Привет! Это быстрый тест.</textarea>
       <div class="row">
+        <label>Режим ударений (preview)</label>
+        <select class="field" id="preview_accent_mode" style="max-width:280px">
+          <option value="auto_plus_overrides">Авто + мои overrides (рекомендуется)</option>
+          <option value="overrides_only">Только мои overrides (без авто)</option>
+          <option value="none">Без ударений</option>
+        </select>
+      </div>
+      <div class="row">
         <button class="btn btn-ghost" onclick="go(1)">← Назад</button>
         <button class="btn btn-primary" onclick="preview()">Сделать preview</button>
         <button class="btn btn-success" id="n2" disabled onclick="go(3)">Далее: Улучшение →</button>
@@ -230,6 +238,15 @@
         <label><input type="checkbox" id="ovr" checked> Учитывать ручные overrides</label>
       </div>
       <div class="row">
+        <label>Режим ударений</label>
+        <select class="field" id="accent_mode" style="max-width:320px">
+          <option value="auto_plus_overrides">Авто + мои overrides (рекомендуется)</option>
+          <option value="overrides_only">Только мои overrides (без авто)</option>
+          <option value="none">Без ударений</option>
+        </select>
+      </div>
+      <div class="hint">После завершения задачи ниже показывается «Подготовленный текст» — именно он отправляется в синтез и помогает проверить, применились ли ударения.</div>
+      <div class="row">
         <button class="btn btn-ghost" onclick="go(3)">← Назад</button>
         <button class="btn btn-primary" onclick="renderTTS()">Озвучить текст</button>
         <button class="btn btn-success" id="n4" disabled onclick="go(5)">Finish →</button>
@@ -237,6 +254,7 @@
       <div class="bar"><div id="p4"></div></div>
       <audio id="a4" controls></audio>
       <pre id="s4o"></pre>
+      <pre id="prepared_text_out"></pre>
     </div>
 
     <div id="s5" class="step">
@@ -307,15 +325,61 @@ function addSelectedFiles(){
 }
 function removeSample(idx){sampleQueue.splice(idx,1); renderSampleList();}
 async function api(url,opt){let r=await fetch(url,opt);let text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch{data={detail:text||'invalid response'}};if(!r.ok){throw new Error(data.error_text||data.detail||`HTTP ${r.status}`);}return data;}
-async function loadSession(){let sid=localStorage.getItem('session_id');let j=await api('/v1/ui/session'+(sid?`?session_id=${sid}`:'')); st={...st,...j}; localStorage.setItem('session_id',st.id||st.session_id); st.session_id=st.id||st.session_id; if(st.preview_text_draft)qs('preview_text').value=st.preview_text_draft; if(st.tts_text_draft)qs('ttstext').value=st.tts_text_draft; if(st.mode)qs('mode').value=st.mode; if(st.format)qs('fmt').value=st.format; if(st.speed)qs('speed').value=st.speed; if(st.selected_voice_id)qs('n1').disabled=false; if(st.preview_done&&st.preview_audio_url){qs('a2').src=st.preview_audio_url;qs('n2').disabled=false;} if(st.train_done)qs('n3').disabled=false; if(st.tts_done&&st.tts_audio_url){qs('a4').src=st.tts_audio_url;qs('n4').disabled=false;setOut('sum',`voice=${st.selected_voice_id}\nprofile=${st.selected_profile_id}\nresult=${st.tts_audio_url}`);} if(st.last_error){const out=qs('s'+Math.min(4,Math.max(1,st.current_step))+'o'); if(out){out.innerText=st.last_error; out.classList.add('danger-box');}} if(st.active_preview_job_id)poll(st.active_preview_job_id,'2'); if(st.active_train_job_id)poll(st.active_train_job_id,'3'); if(st.active_tts_job_id)poll(st.active_tts_job_id,'4'); render(); renderSampleList();}
+function renderPreparedText(job){
+  const prepared=(job.input_params&&job.input_params.prepared_text)||'';
+  if(prepared){
+    setOut('prepared_text_out', 'Подготовленный текст (после правил ударений):
+'+prepared);
+  }
+}
+async function loadSession(){
+  let sid=localStorage.getItem('session_id');
+  let j=await api('/v1/ui/session'+(sid?`?session_id=${sid}`:''));
+  st={...st,...j};
+  localStorage.setItem('session_id',st.id||st.session_id);
+  st.session_id=st.id||st.session_id;
+  if(st.preview_text_draft)qs('preview_text').value=st.preview_text_draft;
+  if(st.tts_text_draft)qs('ttstext').value=st.tts_text_draft;
+  if(st.mode)qs('mode').value=st.mode;
+  if(st.format)qs('fmt').value=st.format;
+  if(st.speed)qs('speed').value=st.speed;
+  if(st.selected_voice_id)qs('n1').disabled=false;
+  if(st.preview_done&&st.preview_audio_url){qs('a2').src=st.preview_audio_url;qs('n2').disabled=false;}
+  if(st.train_done)qs('n3').disabled=false;
+  if(st.tts_done&&st.tts_audio_url){qs('a4').src=st.tts_audio_url;qs('n4').disabled=false;setOut('sum',`voice=${st.selected_voice_id}
+profile=${st.selected_profile_id}
+result=${st.tts_audio_url}`);}
+  if(st.last_error){const out=qs('s'+Math.min(4,Math.max(1,st.current_step))+'o'); if(out){out.innerText=st.last_error; out.classList.add('danger-box');}}
+  if(st.active_preview_job_id)poll(st.active_preview_job_id,'2');
+  if(st.active_train_job_id)poll(st.active_train_job_id,'3');
+  if(st.active_tts_job_id)poll(st.active_tts_job_id,'4');
+  render(); renderSampleList();
+}
 async function saveSession(extra={}){st={...st,...extra}; await api('/v1/ui/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(st)}); localStorage.setItem('session_id',st.session_id||st.id||'');}
 async function createVoice(){try{const files=sampleQueue.length?sampleQueue:Array.from(qs('samples').files||[]); if(!files.length) throw new Error('Добавьте хотя бы один аудиофайл. Лучше 3–10.'); const fd=new FormData(); fd.append('name',qs('vname').value||'my-voice'); fd.append('description','wizard'); for(const f of files)fd.append('samples',f); let r=await fetch('/v1/voices',{method:'POST',body:fd}); let txt=await r.text(); let j={}; try{j=txt?JSON.parse(txt):{};}catch{j={detail:txt||'invalid response'}}; if(!r.ok)throw new Error(j.detail||j.error_text||`HTTP ${r.status}`); st.selected_voice_id=j.voice_id; setOut('s1o',JSON.stringify(j,null,2)); qs('n1').disabled=false; await saveSession({selected_voice_id:j.voice_id,current_step:1,last_error:null});}catch(e){setOut('s1o',e.message,true);}}
-async function preview(){try{let j=await api(`/v1/voices/${st.selected_voice_id}/preview`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:qs('preview_text').value})}); setOut('s2o',JSON.stringify(j,null,2)); await saveSession({active_preview_job_id:j.job_id,preview_text_draft:qs('preview_text').value,last_error:null}); poll(j.job_id,'2');}catch(e){setOut('s2o',e.message,true);}}
+async function preview(){
+  try{
+    const payload={
+      text:qs('preview_text').value,
+      accent_mode:qs('preview_accent_mode').value,
+      use_accenting:qs('preview_accent_mode').value!=='none',
+      use_user_overrides:true,
+    };
+    let j=await api(`/v1/voices/${st.selected_voice_id}/preview`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    setOut('s2o',JSON.stringify(j,null,2));
+    await saveSession({active_preview_job_id:j.job_id,preview_text_draft:payload.text,last_error:null});
+    poll(j.job_id,'2');
+  }catch(e){setOut('s2o',e.message,true);}
+}
 async function train(){try{let j=await api(`/v1/voices/${st.selected_voice_id}/train`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile_name:qs('pname').value})}); setOut('s3o',JSON.stringify(j,null,2)); await saveSession({active_train_job_id:j.job_id,last_error:null}); poll(j.job_id,'3');}catch(e){setOut('s3o',e.message,true);}}
-async function renderTTS(){let payload={voice_id:st.selected_voice_id,profile_id:st.selected_profile_id,text:qs('ttstext').value,mode:qs('mode').value,format:qs('fmt').value,speed:parseFloat(qs('speed').value),use_accenting:qs('acc').checked,use_user_overrides:qs('ovr').checked}; try{let j=await api('/v1/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); setOut('s4o',JSON.stringify(j,null,2)); await saveSession({active_tts_job_id:j.job_id,tts_text_draft:payload.text,mode:payload.mode,format:payload.format,speed:payload.speed,use_accenting:payload.use_accenting,use_user_overrides:payload.use_user_overrides,last_error:null}); poll(j.job_id,'4');}catch(e){setOut('s4o',e.message,true);}}
+async function renderTTS(){
+  let payload={voice_id:st.selected_voice_id,profile_id:st.selected_profile_id,text:qs('ttstext').value,mode:qs('mode').value,format:qs('fmt').value,speed:parseFloat(qs('speed').value),use_accenting:qs('acc').checked,use_user_overrides:qs('ovr').checked,accent_mode:qs('accent_mode').value};
+  try{let j=await api('/v1/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); setOut('s4o',JSON.stringify(j,null,2)); setOut('prepared_text_out',''); await saveSession({active_tts_job_id:j.job_id,tts_text_draft:payload.text,mode:payload.mode,format:payload.format,speed:payload.speed,use_accenting:payload.use_accenting,use_user_overrides:payload.use_user_overrides,last_error:null}); poll(j.job_id,'4');}catch(e){setOut('s4o',e.message,true);}}
 async function poll(jobId,step){let timer=setInterval(async()=>{try{let j=await api('/v1/jobs/'+jobId); qs('p'+step).style.width=(j.progress||0)+'%'; if(j.status==='done'){clearInterval(timer); if(step==='2'){const url='/media/outputs/'+jobId+'.wav'; qs('a2').src=url; qs('n2').disabled=false; await saveSession({active_preview_job_id:null,preview_done:true,preview_audio_url:url,last_error:null});}
 if(step==='3'){let p=await api(`/v1/voices/${st.selected_voice_id}/profiles`); if(p.length){st.selected_profile_id=p[p.length-1].id; await saveSession({selected_profile_id:st.selected_profile_id,active_train_job_id:null,train_done:true,last_error:null}); qs('n3').disabled=false;}}
-if(step==='4'){let ext=qs('fmt').value; const url='/media/outputs/'+jobId+'.'+ext; qs('a4').src=url; qs('n4').disabled=false; setOut('sum',`voice=${st.selected_voice_id}\nprofile=${st.selected_profile_id}\nresult=${url}`); await saveSession({active_tts_job_id:null,tts_done:true,tts_audio_url:url,last_error:null});}}
+if(step==='4'){let ext=qs('fmt').value; const url='/media/outputs/'+jobId+'.'+ext; qs('a4').src=url; qs('n4').disabled=false; renderPreparedText(j); setOut('sum',`voice=${st.selected_voice_id}
+profile=${st.selected_profile_id}
+result=${url}`); await saveSession({active_tts_job_id:null,tts_done:true,tts_audio_url:url,last_error:null});}}
 if(j.status==='failed'){clearInterval(timer); const msg=j.error_text||'job failed'; setOut('s'+step+'o',msg,true); let reset={}; if(step==='2')reset={active_preview_job_id:null}; if(step==='3')reset={active_train_job_id:null}; if(step==='4')reset={active_tts_job_id:null}; await saveSession({...reset,last_error:msg});}}catch(e){clearInterval(timer); setOut('s'+step+'o',e.message,true);}},1500)}
 async function resetStepState(){if(st.current_step===2){await saveSession({active_preview_job_id:null,last_error:null}); setOut('s2o',''); qs('p2').style.width='0%';} if(st.current_step===3){await saveSession({active_train_job_id:null,last_error:null}); setOut('s3o',''); qs('p3').style.width='0%';} if(st.current_step===4){await saveSession({active_tts_job_id:null,last_error:null}); setOut('s4o',''); qs('p4').style.width='0%';}}
 async function saveOverride(){try{if(!qs('ow').value||!qs('oa').value) throw new Error('Заполните оба поля: слово и форму с ударением.'); let j=await api('/v1/accent-overrides?word='+encodeURIComponent(qs('ow').value)+'&accented='+encodeURIComponent(qs('oa').value),{method:'POST'}); setOut('ovrout','Сохранено!\n'+JSON.stringify(j,null,2));}catch(e){setOut('ovrout',e.message,true);}}

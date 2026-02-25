@@ -66,7 +66,7 @@ class RussianTextFrontend:
         lines = text.splitlines()
         return [line if line.strip() else '__STANZA_BREAK__' for line in lines]
 
-    def apply_accents(self, text: str, use_user_overrides: bool = True) -> str:
+    def apply_accents(self, text: str, use_user_overrides: bool = True, enable_auto: bool = True) -> str:
         # Keep user/manual accents with highest priority and only accentize the rest.
         word_re = r'[А-Яа-яЁё\u0301-]+'
         tokens = re.findall(r'[А-Яа-яЁё\u0301-]+|[^А-Яа-яЁё\u0301-]+', text)
@@ -97,7 +97,7 @@ class RussianTextFrontend:
             out.append(key)
 
         joined = ''.join(out)
-        if self._accent_callable is None:
+        if not enable_auto or self._accent_callable is None:
             result = joined
         else:
             try:
@@ -109,10 +109,20 @@ class RussianTextFrontend:
             result = result.replace(key, value)
         return result
 
-    def preprocess(self, text: str, use_accenting: bool, use_user_overrides: bool) -> str:
+    def preprocess(
+        self,
+        text: str,
+        use_accenting: bool,
+        use_user_overrides: bool,
+        accent_mode: str = 'auto_plus_overrides',
+    ) -> str:
         text = self._normalize_numbers(text)
         text = self._normalize_abbr(text)
         text = re.sub(r'\s+', ' ', text).strip()
+        if accent_mode == 'none':
+            return text
+        if accent_mode == 'overrides_only':
+            return self.apply_accents(text, use_user_overrides=True, enable_auto=False)
         if use_accenting:
             text = self.apply_accents(text, use_user_overrides=use_user_overrides)
         return text

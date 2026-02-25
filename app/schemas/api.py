@@ -33,6 +33,7 @@ class TTSRequest(BaseModel):
     speed: float = Field(default=1.0, ge=0.5, le=1.5)
     use_accenting: bool = True
     use_user_overrides: bool = True
+    accent_mode: Literal['auto_plus_overrides', 'overrides_only', 'none'] = 'auto_plus_overrides'
 
 
 class JobOut(BaseModel):
@@ -49,6 +50,9 @@ class JobOut(BaseModel):
 
 class PreviewRequest(BaseModel):
     text: str = 'Привет! Это тест вашего голоса.'
+    use_accenting: bool = True
+    use_user_overrides: bool = True
+    accent_mode: Literal['auto_plus_overrides', 'overrides_only', 'none'] = 'auto_plus_overrides'
 
 
 class TrainRequest(BaseModel):

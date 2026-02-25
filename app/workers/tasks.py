@@ -39,20 +39,30 @@ def _profile_refs(db, voice_id: str, profile_id: str | None = None) -> list[str]
 
 
 @celery_app.task(bind=True, name='app.workers.tasks.run_preview')
-def run_preview(self, job_id: str, voice_id: str, text: str):
+def run_preview(self, job_id: str, payload: dict):
     db = SessionLocal()
     try:
         job = db.get(TTSJob, job_id)
         job.status = JobStatus.running
         job.progress = 10
         db.commit()
-        refs = _profile_refs(db, voice_id)
+        frontend = _get_frontend()
+        prepared = frontend.preprocess(
+            payload['text'],
+            payload.get('use_accenting', True),
+            payload.get('use_user_overrides', True),
+            payload.get('accent_mode', 'auto_plus_overrides'),
+        )
+        job.input_params = {**(job.input_params or {}), 'prepared_text': prepared}
+        db.commit()
+
+        refs = _profile_refs(db, payload['voice_id'])
         if not refs:
             raise RuntimeError('No reference samples for preview')
         out_dir = Path(settings.outputs_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
         output = str(out_dir / f'{job_id}.wav')
-        _get_tts().tts_to_file(text=text, output_wav=output, speed=1.0, speaker_wavs=refs)
+        _get_tts().tts_to_file(text=prepared, output_wav=output, speed=1.0, speaker_wavs=refs)
         job.status = JobStatus.done
         job.progress = 100
         job.output_path = output
@@ -118,7 +128,14 @@ def run_tts(self, job_id: str, payload: dict):
         job.progress = 5
         db.commit()
         frontend = _get_frontend()
-        prepared = frontend.preprocess(payload['text'], payload['use_accenting'], payload['use_user_overrides'])
+        prepared = frontend.preprocess(
+            payload['text'],
+            payload['use_accenting'],
+            payload['use_user_overrides'],
+            payload.get('accent_mode', 'auto_plus_overrides'),
+        )
+        job.input_params = {**(job.input_params or {}), 'prepared_text': prepared}
+        db.commit()
         parts = frontend.split_poem(prepared) if payload['mode'] == 'poem' else frontend.split_story(prepared)
         refs = _profile_refs(db, payload['voice_id'], payload.get('profile_id'))
         if not refs:

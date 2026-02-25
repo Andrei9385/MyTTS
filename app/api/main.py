@@ -101,7 +101,7 @@ def retry_job(job_id: str, db: Session = Depends(get_db)):
         db.add(new_job)
         db.commit()
         if job.type == JobType.preview:
-            celery_app.send_task('app.workers.tasks.run_preview', args=[new_job.id, params['voice_id'], params['text']])
+            celery_app.send_task('app.workers.tasks.run_preview', args=[new_job.id, params])
         else:
             celery_app.send_task('app.workers.tasks.run_tts', args=[new_job.id, params])
     return {'job_id': new_job.id}
@@ -155,10 +155,17 @@ def get_voice(voice_id: str, db: Session = Depends(get_db)):
 def preview_voice(voice_id: str, req: PreviewRequest, db: Session = Depends(get_db)):
     if not db.get(Voice, voice_id):
         raise HTTPException(404, 'Voice not found')
-    job = TTSJob(type=JobType.preview, status=JobStatus.pending, input_params={'voice_id': voice_id, 'text': req.text})
+    payload = {
+        'voice_id': voice_id,
+        'text': req.text,
+        'use_accenting': req.use_accenting,
+        'use_user_overrides': req.use_user_overrides,
+        'accent_mode': req.accent_mode,
+    }
+    job = TTSJob(type=JobType.preview, status=JobStatus.pending, input_params=payload)
     db.add(job)
     db.commit()
-    celery_app.send_task('app.workers.tasks.run_preview', args=[job.id, voice_id, req.text])
+    celery_app.send_task('app.workers.tasks.run_preview', args=[job.id, payload])
     return SimpleJobResponse(job_id=job.id, status='pending')
 
 
