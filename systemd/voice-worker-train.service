@@ -7,7 +7,8 @@ User=voiceai
 Group=voiceai
 WorkingDirectory=/opt/voice-ai/app
 EnvironmentFile=/opt/voice-ai/config/.env
-ExecStart=/opt/voice-ai/.venv/bin/celery -A app.workers.celery_app.celery_app worker -Q train -n train@%h --loglevel=INFO
+Environment=COQUI_TOS_AGREED=1
+ExecStart=/opt/voice-ai/.venv/bin/python -m celery -A app.workers.celery_app.celery_app worker -Q train -n train@%h --loglevel=INFO
 Restart=always
 RestartSec=3
 StandardOutput=journal

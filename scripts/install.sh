@@ -110,6 +110,8 @@ if ! /opt/voice-ai/.venv/bin/pip install -r /opt/voice-ai/app/requirements.txt; 
   }
 fi
 
+export COQUI_TOS_AGREED=1
+
 log "Installed core dependency versions"
 /opt/voice-ai/.venv/bin/python - <<'PY'
 import importlib
