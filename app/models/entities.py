@@ -89,5 +89,5 @@ class Artifact(Base):
     job_id: Mapped[str] = mapped_column(String, index=True)
     kind: Mapped[str] = mapped_column(String(64))
     path: Mapped[str] = mapped_column(String(1024))
-    metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    meta: Mapped[dict] = mapped_column('metadata', JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

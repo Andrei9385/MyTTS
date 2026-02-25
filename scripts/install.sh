@@ -23,7 +23,11 @@ apt-get install -y software-properties-common curl git rsync ffmpeg redis-server
 PY_BIN="python3.11"
 if ! command -v "$PY_BIN" >/dev/null 2>&1; then
   log "Trying to install Python 3.11 for better dependency compatibility"
-  apt-get install -y python3.11 python3.11-venv || true
+  if apt-cache show python3.11 >/dev/null 2>&1; then
+    apt-get install -y python3.11 python3.11-venv || true
+  else
+    log "Python 3.11 packages are unavailable in current APT sources, skipping"
+  fi
 fi
 if ! command -v "$PY_BIN" >/dev/null 2>&1; then
   PY_BIN="python3.12"
@@ -66,6 +70,14 @@ fi
 
 chown -R voiceai:voiceai /opt/voice-ai
 
+log "Preflight import check"
+PYTHONPATH=/opt/voice-ai/app /opt/voice-ai/.venv/bin/python - <<'PY'
+import importlib
+importlib.import_module('app.models.entities')
+importlib.import_module('app.api.main')
+print('preflight import ok')
+PY
+
 log "Installing systemd units"
 install -m 0644 /opt/voice-ai/app/systemd/voice-api.service /etc/systemd/system/voice-api.service
 install -m 0644 /opt/voice-ai/app/systemd/voice-worker-preview.service /etc/systemd/system/voice-worker-preview.service
@@ -76,9 +88,15 @@ install -m 0644 /opt/voice-ai/app/systemd/voice-gradio.service /etc/systemd/syst
 systemctl daemon-reload
 systemctl enable --now voice-api.service voice-worker-preview.service voice-worker-train.service voice-worker-render.service voice-gradio.service
 
+# quick early diagnostic if API failed hard
+if ! systemctl is-active --quiet voice-api.service; then
+  log "voice-api.service is not active right after start"
+  systemctl --no-pager --full status voice-api.service || true
+fi
+
 log "Smoke test"
-for i in {1..30}; do
-  if curl -fsS http://127.0.0.1:8000/health >/dev/null; then
+for i in {1..45}; do
+  if curl -fsS http://127.0.0.1:8000/health >/dev/null 2>&1; then
     log "Install completed"
     exit 0
   fi

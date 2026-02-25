@@ -46,7 +46,7 @@ def run_preview(self, job_id: str, voice_id: str, text: str):
         job.status = JobStatus.done
         job.progress = 100
         job.output_path = output
-        db.add(Artifact(job_id=job_id, kind='preview', path=output, metadata=emb))
+        db.add(Artifact(job_id=job_id, kind='preview', path=output, meta=emb))
         db.commit()
         return {'output': output}
     except Exception as exc:
@@ -90,7 +90,7 @@ def run_train(self, job_id: str, voice_id: str, profile_name: str):
         job.progress = 100
         job.status = JobStatus.done
         job.output_path = profile_path
-        db.add(Artifact(job_id=job_id, kind='profile', path=profile_path, metadata=params))
+        db.add(Artifact(job_id=job_id, kind='profile', path=profile_path, meta=params))
         db.commit()
         return {'profile_id': profile.id}
     except Exception as exc:
@@ -155,7 +155,7 @@ def run_tts(self, job_id: str, payload: dict):
         job.status = JobStatus.done
         job.progress = 100
         job.output_path = final_path
-        db.add(Artifact(job_id=job_id, kind='tts', path=final_path, metadata={'mode': payload['mode']}))
+        db.add(Artifact(job_id=job_id, kind='tts', path=final_path, meta={'mode': payload['mode']}))
         db.commit()
         return {'output': final_path}
     except Exception as exc:
