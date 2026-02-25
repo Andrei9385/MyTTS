@@ -18,24 +18,41 @@ fi
 log "Installing apt packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y software-properties-common curl git rsync ffmpeg redis-server postgresql postgresql-contrib python3-venv python3-pip
+apt-get install -y software-properties-common curl git rsync ffmpeg redis-server postgresql postgresql-contrib python3-venv python3-pip build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev libffi-dev liblzma-dev tk-dev xz-utils
 
 PY_BIN="python3.11"
 if ! command -v "$PY_BIN" >/dev/null 2>&1; then
-  log "Trying to install Python 3.11 for better dependency compatibility"
+  log "Trying to install Python 3.11 for XTTS/Coqui compatibility"
   if apt-cache show python3.11 >/dev/null 2>&1; then
     apt-get install -y python3.11 python3.11-venv || true
   else
-    log "Python 3.11 packages are unavailable in current APT sources, skipping"
+    log "Python 3.11 packages are unavailable in current APT sources, trying deadsnakes PPA"
+    add-apt-repository -y ppa:deadsnakes/ppa || true
+    apt-get update || true
+    apt-get install -y python3.11 python3.11-venv || true
   fi
 fi
 if ! command -v "$PY_BIN" >/dev/null 2>&1; then
-  PY_BIN="python3.12"
-  apt-get install -y python3.12 python3.12-venv || true
+  log "Python 3.11 still missing, building CPython 3.11 from source (one-time)"
+  PY311_PREFIX="/opt/python311"
+  if [[ ! -x "$PY311_PREFIX/bin/python3.11" ]]; then
+    TMPD=$(mktemp -d)
+    trap 'rm -rf "$TMPD"' EXIT
+    curl -fsSL https://www.python.org/ftp/python/3.11.11/Python-3.11.11.tgz -o "$TMPD/Python-3.11.11.tgz"
+    tar -xzf "$TMPD/Python-3.11.11.tgz" -C "$TMPD"
+    cd "$TMPD/Python-3.11.11"
+    ./configure --prefix="$PY311_PREFIX" --enable-optimizations --with-ensurepip=install
+    make -j"$(nproc)"
+    make install
+    cd - >/dev/null
+  fi
+  if [[ -x "$PY311_PREFIX/bin/python3.11" ]]; then
+    PY_BIN="$PY311_PREFIX/bin/python3.11"
+  fi
 fi
-if ! command -v "$PY_BIN" >/dev/null 2>&1; then
-  log "python3.11/3.12 not found, fallback to python3"
-  PY_BIN="python3"
+if ! command -v "$PY_BIN" >/dev/null 2>&1 && [[ ! -x "$PY_BIN" ]]; then
+  log "ERROR: Python 3.11 is required for TTS==0.22.0 (XTTS-v2). Unable to install automatically."
+  exit 1
 fi
 
 id -u voiceai >/dev/null 2>&1 || useradd --system --create-home --shell /bin/bash voiceai
@@ -62,6 +79,14 @@ sudo -u postgres psql -d voiceai -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public G
 sudo -u postgres psql -d voiceai -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO voiceai;"
 
 log "Building virtualenv"
+if [[ -x /opt/voice-ai/.venv/bin/python ]]; then
+  VENV_PY_VER=$(/opt/voice-ai/.venv/bin/python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+  TARGET_PY_VER=$($PY_BIN -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+  if [[ "$VENV_PY_VER" != "$TARGET_PY_VER" ]]; then
+    log "Recreating venv: existing Python $VENV_PY_VER != target $TARGET_PY_VER"
+    rm -rf /opt/voice-ai/.venv
+  fi
+fi
 if [[ ! -d /opt/voice-ai/.venv ]]; then
   "$PY_BIN" -m venv /opt/voice-ai/.venv
 fi
@@ -69,9 +94,12 @@ fi
 
 log "Installing Python requirements"
 if ! /opt/voice-ai/.venv/bin/pip install -r /opt/voice-ai/app/requirements.txt; then
-  log "Primary dependency install failed, applying fallback for ruaccent-predictor"
+  log "Dependency install failed. Will only auto-fix ruaccent pin if present, then retry once."
   sed -i 's/^ruaccent-predictor==.*/ruaccent-predictor>=1.1.0,<2.0.0/' /opt/voice-ai/app/requirements.txt || true
-  /opt/voice-ai/.venv/bin/pip install -r /opt/voice-ai/app/requirements.txt
+  /opt/voice-ai/.venv/bin/pip install -r /opt/voice-ai/app/requirements.txt || {
+    log "ERROR: dependency install still failing. Check Python version and package compatibility.";
+    exit 1;
+  }
 fi
 
 chown -R voiceai:voiceai /opt/voice-ai
