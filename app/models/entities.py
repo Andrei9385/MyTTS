@@ -91,3 +91,23 @@ class Artifact(Base):
     path: Mapped[str] = mapped_column(String(1024))
     meta: Mapped[dict] = mapped_column('metadata', JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class UISession(Base):
+    __tablename__ = 'ui_sessions'
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    current_step: Mapped[int] = mapped_column(Integer, default=1)
+    selected_voice_id: Mapped[str | None] = mapped_column(String(64))
+    selected_profile_id: Mapped[str | None] = mapped_column(String(64))
+    preview_text_draft: Mapped[str] = mapped_column(Text, default='Привет! Это быстрый тест.')
+    tts_text_draft: Mapped[str] = mapped_column(Text, default='')
+    mode: Mapped[str] = mapped_column(String(16), default='story')
+    format: Mapped[str] = mapped_column(String(8), default='wav')
+    speed: Mapped[float] = mapped_column(Float, default=1.0)
+    use_accenting: Mapped[bool] = mapped_column(default=True)
+    use_user_overrides: Mapped[bool] = mapped_column(default=True)
+    active_preview_job_id: Mapped[str | None] = mapped_column(String(64))
+    active_train_job_id: Mapped[str | None] = mapped_column(String(64))
+    active_tts_job_id: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

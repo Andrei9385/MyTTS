@@ -57,3 +57,22 @@ CREATE TABLE IF NOT EXISTS artifacts (
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS ui_sessions (
+    id VARCHAR PRIMARY KEY,
+    current_step INTEGER DEFAULT 1,
+    selected_voice_id VARCHAR,
+    selected_profile_id VARCHAR,
+    preview_text_draft TEXT DEFAULT 'Привет! Это быстрый тест.',
+    tts_text_draft TEXT DEFAULT '',
+    mode VARCHAR(16) DEFAULT 'story',
+    format VARCHAR(8) DEFAULT 'wav',
+    speed DOUBLE PRECISION DEFAULT 1.0,
+    use_accenting BOOLEAN DEFAULT TRUE,
+    use_user_overrides BOOLEAN DEFAULT TRUE,
+    active_preview_job_id VARCHAR,
+    active_train_job_id VARCHAR,
+    active_tts_job_id VARCHAR,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);

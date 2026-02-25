@@ -6,7 +6,7 @@
 - **FastAPI API** (`/health`, `/v1/voices`, `/v1/tts`, `/v1/jobs`, и т.д.).
 - **Celery workers** (preview/train/render) с Redis broker/backend.
 - **PostgreSQL** для метаданных (voices, samples, profiles, jobs, artifacts).
-- **CPU TTS backend**: Silero TTS (PyTorch CPU) + profile adaptation (embedding-based style params).
+- **CPU TTS backend**: XTTS-v2 (Coqui `tts_models/multilingual/multi-dataset/xtts_v2`) + multi-reference voice cloning + cached profile conditioning.
 - **Text frontend для русского**:
   - нормализация,
   - поддержка `ё`,
@@ -91,7 +91,8 @@ curl -s -X POST http://127.0.0.1:8000/v1/tts \
 ```
 
 ## UI
-- Gradio: `http://127.0.0.1:7860`
+- Wizard UI (FastAPI served): `http://127.0.0.1:8000/`
+- Legacy Gradio (optional): `http://127.0.0.1:7860`
 
 ## Замены тяжелых компонентов на CPU-friendly
 1. **Полный fine-tune TTS** заменен на **light speaker adaptation** через эмбеддинг-профиль (energy + pitch_hint), сохраняемый как profile params JSON.
@@ -110,3 +111,7 @@ celery -A app.workers.celery_app.celery_app worker -Q train --loglevel=INFO
 celery -A app.workers.celery_app.celery_app worker -Q render --loglevel=INFO
 python -m app.ui.gradio_app
 ```
+
+
+## New persistence
+- Added `ui_sessions` table for wizard state restore after refresh/restart.

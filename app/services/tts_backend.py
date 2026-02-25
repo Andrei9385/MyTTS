@@ -1,43 +1,55 @@
+import hashlib
+import json
 from pathlib import Path
 
 import torch
 from pydub import AudioSegment
 
 
-class SileroBackend:
+class XTTSBackend:
     def __init__(self, models_dir: str):
-        self.models_dir = models_dir
-        Path(models_dir).mkdir(parents=True, exist_ok=True)
-        self.device = torch.device('cpu')
-        self.model, self.sample_rate = self._load()
+        self.models_dir = Path(models_dir)
+        self.models_dir.mkdir(parents=True, exist_ok=True)
+        self.device = 'cpu'
+        self.model = None
 
     def _load(self):
+        if self.model is not None:
+            return self.model
+        from TTS.api import TTS
+
         torch.set_num_threads(4)
-        model, _ = torch.hub.load(
-            repo_or_dir='snakers4/silero-models',
-            model='silero_tts',
-            language='ru',
-            speaker='v4_ru',
-            trust_repo=True,
-        )
-        model.to(self.device)
-        return model, 48000
+        self.model = TTS(model_name='tts_models/multilingual/multi-dataset/xtts_v2', progress_bar=False).to(self.device)
+        return self.model
 
-    def _pick_speaker(self, profile_params: dict | None) -> str:
-        base = 'baya'
-        if not profile_params:
-            return base
-        pitch = profile_params.get('pitch_hint', 0)
-        if pitch > 0.2:
-            return 'xenia'
-        if pitch < 0.08:
-            return 'aidar'
-        return base
+    @staticmethod
+    def _hash_paths(paths: list[str]) -> str:
+        key = '|'.join(sorted(paths))
+        return hashlib.sha256(key.encode('utf-8')).hexdigest()
 
-    def tts_to_file(self, text: str, output_wav: str, speed: float = 1.0, profile_params: dict | None = None):
-        speaker = self._pick_speaker(profile_params)
-        self.model.save_wav(text=text, speaker=speaker, sample_rate=self.sample_rate, audio_path=output_wav)
-        if abs(speed - 1.0) > 1e-3:
-            seg = AudioSegment.from_wav(output_wav)
-            seg = seg._spawn(seg.raw_data, overrides={'frame_rate': int(seg.frame_rate * speed)}).set_frame_rate(seg.frame_rate)
-            seg.export(output_wav, format='wav')
+    def build_profile_cache(self, speaker_wavs: list[str], profile_dir: str) -> dict:
+        profile_path = Path(profile_dir)
+        profile_path.mkdir(parents=True, exist_ok=True)
+        refs = [str(Path(x)) for x in speaker_wavs]
+        cache = {
+            'backend': 'xtts_v2',
+            'mode': 'multi_reference_cloning',
+            'speaker_wavs': refs,
+            'refs_hash': self._hash_paths(refs),
+            'language': 'ru',
+        }
+        p = profile_path / 'conditioning.json'
+        p.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding='utf-8')
+        cache['cache_path'] = str(p)
+        return cache
+
+    def tts_to_file(self, text: str, output_wav: str, speed: float, speaker_wavs: list[str], language: str = 'ru') -> None:
+        model = self._load()
+        model.tts_to_file(text=text, file_path=output_wav, speaker_wav=speaker_wavs, language=language, speed=speed)
+
+    @staticmethod
+    def transcode_if_needed(path_wav: str, final_path: str) -> str:
+        if final_path.endswith('.wav'):
+            return path_wav
+        AudioSegment.from_wav(path_wav).export(final_path, format='mp3', bitrate='192k')
+        return final_path

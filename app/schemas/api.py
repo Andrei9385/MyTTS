@@ -52,9 +52,26 @@ class PreviewRequest(BaseModel):
 
 
 class TrainRequest(BaseModel):
-    profile_name: str = 'default-profile'
+    profile_name: str = 'xtts-profile'
 
 
 class SimpleJobResponse(BaseModel):
     job_id: str
     status: str
+
+
+class UISessionPayload(BaseModel):
+    session_id: str | None = None
+    current_step: int | None = None
+    selected_voice_id: str | None = None
+    selected_profile_id: str | None = None
+    preview_text_draft: str | None = None
+    tts_text_draft: str | None = None
+    mode: Literal['story', 'poem'] | None = None
+    format: Literal['wav', 'mp3'] | None = None
+    speed: float | None = None
+    use_accenting: bool | None = None
+    use_user_overrides: bool | None = None
+    active_preview_job_id: str | None = None
+    active_train_job_id: str | None = None
+    active_tts_job_id: str | None = None

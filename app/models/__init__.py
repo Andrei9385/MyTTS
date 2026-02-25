@@ -1,4 +1,4 @@
-from app.models.entities import Artifact, JobStatus, JobType, TTSJob, TrainJob, Voice, VoiceProfile, VoiceSample
+from app.models.entities import Artifact, JobStatus, JobType, TTSJob, TrainJob, UISession, Voice, VoiceProfile, VoiceSample
 
 __all__ = [
     'Artifact',
@@ -6,6 +6,7 @@ __all__ = [
     'JobType',
     'TTSJob',
     'TrainJob',
+    'UISession',
     'Voice',
     'VoiceProfile',
     'VoiceSample',
