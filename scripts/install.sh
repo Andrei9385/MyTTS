@@ -98,13 +98,23 @@ fi
 
 log "Installing Python requirements"
 if ! /opt/voice-ai/.venv/bin/pip install -r /opt/voice-ai/app/requirements.txt; then
-  log "Dependency install failed. Will only auto-fix ruaccent pin if present, then retry once."
-  sed -i 's/^ruaccent-predictor==.*/ruaccent-predictor>=1.1.0,<2.0.0/' /opt/voice-ai/app/requirements.txt || true
+  log "Dependency install failed. Retrying once after refreshing requirement file state."
   /opt/voice-ai/.venv/bin/pip install -r /opt/voice-ai/app/requirements.txt || {
     log "ERROR: dependency install still failing. Check Python version and package compatibility.";
     exit 1;
   }
 fi
+
+log "Installed core dependency versions"
+/opt/voice-ai/.venv/bin/python - <<'PY'
+import importlib
+import sys
+
+print(f"python={sys.version.split()[0]}")
+for module_name in ("numpy", "pandas", "TTS"):
+    module = importlib.import_module(module_name)
+    print(f"{module_name}={getattr(module, '__version__', 'unknown')}")
+PY
 
 chown -R voiceai:voiceai /opt/voice-ai
 

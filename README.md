@@ -10,7 +10,7 @@
 - **Text frontend для русского**:
   - нормализация,
   - поддержка `ё`,
-  - автоударения через `ruaccent-predictor` (ветка 1.1+/1.2+ для совместимости с Python 3.11/3.12),
+  - автоударения через `ruaccent` (если пакет доступен в окружении),
   - пользовательские overrides `data/accent_overrides.json`,
   - приоритет: ручные ударения > overrides > auto predictor.
 - **Два режима чтения**:
@@ -96,8 +96,8 @@ curl -s -X POST http://127.0.0.1:8000/v1/tts \
 
 ## Замены тяжелых компонентов на CPU-friendly
 1. **Полный fine-tune TTS** заменен на **light speaker adaptation** через эмбеддинг-профиль (energy + pitch_hint), сохраняемый как profile params JSON.
-2. **Production TTS** использует **Silero CPU** вместо тяжелых мультимодельных SOTA стеков.
-3. **Voice cloning preview** реализован как zero-shot-like preview на основе референса и профильных параметров (без полного GPU-heavy cloning).
+2. **Production TTS** использует **XTTS-v2 (Coqui TTS)** как основной движок клонирования голоса.
+3. **Voice cloning preview** реализован через XTTS conditioning на основе референса и профильных параметров (CPU-first deployment).
 
 ## Локальный запуск без systemd (dev)
 ```bash
