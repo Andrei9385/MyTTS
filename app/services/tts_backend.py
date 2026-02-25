@@ -6,6 +6,22 @@ import torch
 from pydub import AudioSegment
 
 
+def _ensure_transformers_compat() -> None:
+    """Patch Transformers API differences required by TTS XTTS loader."""
+    try:
+        import transformers
+    except Exception:
+        return
+
+    if getattr(transformers, 'BeamSearchScorer', None) is None:
+        try:
+            from transformers.generation.beam_search import BeamSearchScorer
+
+            transformers.BeamSearchScorer = BeamSearchScorer
+        except Exception:
+            return
+
+
 class XTTSBackend:
     def __init__(self, models_dir: str):
         self.models_dir = Path(models_dir)
@@ -16,6 +32,7 @@ class XTTSBackend:
     def _load(self):
         if self.model is not None:
             return self.model
+        _ensure_transformers_compat()
         from TTS.api import TTS
 
         torch.set_num_threads(4)
