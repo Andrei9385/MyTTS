@@ -161,6 +161,7 @@ def preview_voice(voice_id: str, req: PreviewRequest, db: Session = Depends(get_
         'use_accenting': req.use_accenting,
         'use_user_overrides': req.use_user_overrides,
         'accent_mode': req.accent_mode,
+        'stress_hint_mode': req.stress_hint_mode,
     }
     job = TTSJob(type=JobType.preview, status=JobStatus.pending, input_params=payload)
     db.add(job)

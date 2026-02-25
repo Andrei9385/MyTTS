@@ -53,8 +53,14 @@ def run_preview(self, job_id: str, payload: dict):
             payload.get('use_user_overrides', True),
             payload.get('accent_mode', 'auto_plus_overrides'),
         )
-        backend_text = frontend.to_tts_stress_format(prepared)
-        job.input_params = {**(job.input_params or {}), 'prepared_text': prepared, 'backend_text': backend_text}
+        stress_hint_mode = payload.get('stress_hint_mode', 'none')
+        backend_text = frontend.to_tts_stress_format(prepared, mode=stress_hint_mode)
+        job.input_params = {
+            **(job.input_params or {}),
+            'prepared_text': prepared,
+            'backend_text': backend_text,
+            'stress_hint_mode': stress_hint_mode,
+        }
         db.commit()
 
         refs = _profile_refs(db, payload['voice_id'])
@@ -135,8 +141,14 @@ def run_tts(self, job_id: str, payload: dict):
             payload['use_user_overrides'],
             payload.get('accent_mode', 'auto_plus_overrides'),
         )
-        backend_text = frontend.to_tts_stress_format(prepared)
-        job.input_params = {**(job.input_params or {}), 'prepared_text': prepared, 'backend_text': backend_text}
+        stress_hint_mode = payload.get('stress_hint_mode', 'none')
+        backend_text = frontend.to_tts_stress_format(prepared, mode=stress_hint_mode)
+        job.input_params = {
+            **(job.input_params or {}),
+            'prepared_text': prepared,
+            'backend_text': backend_text,
+            'stress_hint_mode': stress_hint_mode,
+        }
         db.commit()
         parts = frontend.split_poem(backend_text) if payload['mode'] == 'poem' else frontend.split_story(backend_text)
         refs = _profile_refs(db, payload['voice_id'], payload.get('profile_id'))

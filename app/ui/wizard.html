@@ -245,6 +245,15 @@
           <option value="none">Без ударений</option>
         </select>
       </div>
+      <div class="row">
+        <label>Подсказка ударений для XTTS</label>
+        <select class="field" id="stress_hint_mode" style="max-width:360px">
+          <option value="none">Без доп. подсказки (рекомендуется по умолчанию)</option>
+          <option value="plus">Только + перед ударной гласной (эксперимент)</option>
+          <option value="plus_and_acute">+ и знак ударения (эксперимент)</option>
+        </select>
+      </div>
+      <div class="hint">Важно: XTTS-v2 не гарантирует строгое соблюдение ударения в русском. Этот параметр — экспериментальная подсказка модели.</div>
       <div class="hint">После завершения задачи ниже показывается «Подготовленный текст» — именно он отправляется в синтез и помогает проверить, применились ли ударения.</div>
       <div class="row">
         <button class="btn btn-ghost" onclick="go(3)">← Назад</button>
@@ -368,6 +377,7 @@ async function preview(){
       accent_mode:qs('preview_accent_mode').value,
       use_accenting:qs('preview_accent_mode').value!=='none',
       use_user_overrides:true,
+      stress_hint_mode:qs('stress_hint_mode').value,
     };
     let j=await api(`/v1/voices/${st.selected_voice_id}/preview`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     setOut('s2o',JSON.stringify(j,null,2));
@@ -377,7 +387,7 @@ async function preview(){
 }
 async function train(){try{let j=await api(`/v1/voices/${st.selected_voice_id}/train`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile_name:qs('pname').value})}); setOut('s3o',JSON.stringify(j,null,2)); await saveSession({active_train_job_id:j.job_id,last_error:null}); poll(j.job_id,'3');}catch(e){setOut('s3o',e.message,true);}}
 async function renderTTS(){
-  let payload={voice_id:st.selected_voice_id,profile_id:st.selected_profile_id,text:qs('ttstext').value,mode:qs('mode').value,format:qs('fmt').value,speed:parseFloat(qs('speed').value),use_accenting:qs('acc').checked,use_user_overrides:qs('ovr').checked,accent_mode:qs('accent_mode').value};
+  let payload={voice_id:st.selected_voice_id,profile_id:st.selected_profile_id,text:qs('ttstext').value,mode:qs('mode').value,format:qs('fmt').value,speed:parseFloat(qs('speed').value),use_accenting:qs('acc').checked,use_user_overrides:qs('ovr').checked,accent_mode:qs('accent_mode').value,stress_hint_mode:qs('stress_hint_mode').value};
   try{let j=await api('/v1/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); setOut('s4o',JSON.stringify(j,null,2)); setOut('prepared_text_out',''); await saveSession({active_tts_job_id:j.job_id,tts_text_draft:payload.text,mode:payload.mode,format:payload.format,speed:payload.speed,use_accenting:payload.use_accenting,use_user_overrides:payload.use_user_overrides,last_error:null}); poll(j.job_id,'4');}catch(e){setOut('s4o',e.message,true);}}
 async function poll(jobId,step){let timer=setInterval(async()=>{try{let j=await api('/v1/jobs/'+jobId); qs('p'+step).style.width=(j.progress||0)+'%'; if(j.status==='done'){clearInterval(timer); if(step==='2'){const url='/media/outputs/'+jobId+'.wav'; qs('a2').src=url; qs('n2').disabled=false; await saveSession({active_preview_job_id:null,preview_done:true,preview_audio_url:url,last_error:null});}
 if(step==='3'){let p=await api(`/v1/voices/${st.selected_voice_id}/profiles`); if(p.length){st.selected_profile_id=p[p.length-1].id; await saveSession({selected_profile_id:st.selected_profile_id,active_train_job_id:null,train_done:true,last_error:null}); qs('n3').disabled=false;}}

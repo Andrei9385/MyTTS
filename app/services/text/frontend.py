@@ -137,11 +137,12 @@ class RussianTextFrontend:
         return text
 
     @staticmethod
-    def to_tts_stress_format(text: str) -> str:
-        """Convert stress marks to stronger XTTS hints for manual/override accenting."""
-        # Some XTTS builds under-react to the combining acute accent. We provide
-        # multiple simultaneous hints for stressed vowels:
-        #   1) `+` marker before vowel (common XTTS stress hint)
-        #   2) keep combining acute accent
-        #   3) duplicate stressed vowel once to make stress audibly stronger
-        return re.sub(r'([А-Яа-яЁё])\u0301', lambda m: f'+{m.group(1)}́{m.group(1)}', text)
+    def to_tts_stress_format(text: str, mode: str = 'none') -> str:
+        """Convert stress marks to optional XTTS hints without corrupting words."""
+        if mode == 'none':
+            return text
+        if mode == 'plus':
+            return re.sub(r'([А-Яа-яЁё])\u0301', lambda m: f'+{m.group(1)}', text).replace('́', '')
+        if mode == 'plus_and_acute':
+            return re.sub(r'([А-Яа-яЁё])\u0301', lambda m: f'+{m.group(1)}́', text)
+        return text

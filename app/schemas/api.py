@@ -34,6 +34,7 @@ class TTSRequest(BaseModel):
     use_accenting: bool = True
     use_user_overrides: bool = True
     accent_mode: Literal['auto_plus_overrides', 'overrides_only', 'none'] = 'auto_plus_overrides'
+    stress_hint_mode: Literal['none', 'plus', 'plus_and_acute'] = 'none'
 
 
 class JobOut(BaseModel):
@@ -53,6 +54,7 @@ class PreviewRequest(BaseModel):
     use_accenting: bool = True
     use_user_overrides: bool = True
     accent_mode: Literal['auto_plus_overrides', 'overrides_only', 'none'] = 'auto_plus_overrides'
+    stress_hint_mode: Literal['none', 'plus', 'plus_and_acute'] = 'none'
 
 
 class TrainRequest(BaseModel):
