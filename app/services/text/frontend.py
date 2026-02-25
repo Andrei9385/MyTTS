@@ -138,6 +138,7 @@ class RussianTextFrontend:
 
     @staticmethod
     def to_tts_stress_format(text: str) -> str:
-        """Convert combining-acute stress marks to XTTS-friendly +stress markers."""
-        converted = re.sub(r'([А-Яа-яЁё])\u0301', r'+\1', text)
-        return converted.replace('́', '')
+        """Convert stress marks to XTTS-friendly text while keeping original stress hints too."""
+        # XTTS often responds better to +vowel stress markers, but in some versions
+        # combining-acute can also help. Keep both markers to maximize compatibility.
+        return re.sub(r'([А-Яа-яЁё])\u0301', lambda m: f'+{m.group(1)}́', text)

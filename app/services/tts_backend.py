@@ -1,5 +1,6 @@
 import hashlib
 import json
+import warnings
 from pathlib import Path
 
 import torch
@@ -37,6 +38,22 @@ def _ensure_transformers_compat() -> None:
             return
 
 
+def _suppress_known_torchaudio_deprecation_warnings() -> None:
+    """Silence noisy upstream torchaudio deprecation warnings from XTTS internals."""
+    warnings.filterwarnings(
+        'ignore',
+        message=r'.*load_with_torchcodec.*',
+        category=UserWarning,
+        module=r'torchaudio\._backend\.utils',
+    )
+    warnings.filterwarnings(
+        'ignore',
+        message=r'.*StreamingMediaDecoder has been deprecated.*',
+        category=UserWarning,
+        module=r'torchaudio\._backend\.ffmpeg',
+    )
+
+
 class XTTSBackend:
     def __init__(self, models_dir: str):
         self.models_dir = Path(models_dir)
@@ -47,6 +64,7 @@ class XTTSBackend:
     def _load(self):
         if self.model is not None:
             return self.model
+        _suppress_known_torchaudio_deprecation_warnings()
         _ensure_torch_load_compat()
         _ensure_transformers_compat()
         from TTS.api import TTS
