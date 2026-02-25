@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MyTTS XTTS Wizard</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #fff;
+      --text: #111827;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --primary: #2563eb;
+      --primary-2: #1d4ed8;
+      --success: #16a34a;
+      --warn-bg: #fff7ed;
+      --warn-line: #fdba74;
+      --danger-bg: #fef2f2;
+      --danger-line: #fecaca;
+      --shadow: 0 12px 30px rgba(15, 23, 42, .08);
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at 10% 10%, #1f2a50 0, var(--bg) 50%);
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .shell { max-width: 1080px; margin: 0 auto; display: grid; gap: 14px; }
+    .hero {
+      background: linear-gradient(135deg, #172554 0, #1e3a8a 55%, #1d4ed8 100%);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .hero h1 { margin: 0; font-size: 26px; }
+    .hero p { margin: 8px 0 0; color: #c7d2fe; font-size: 14px; }
+    .steps { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 8px; margin-top: 12px; }
+    .pill {
+      border: 1px solid rgba(255,255,255,.26);
+      color: #c7d2fe;
+      border-radius: 999px;
+      font-size: 12px;
+      text-align: center;
+      padding: 7px 10px;
+      background: rgba(255,255,255,.07);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pill.active { color: #fff; border-color: #fff; background: rgba(255,255,255,.18); font-weight: 700; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid #dbeafe;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+    .head { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; }
+    .head h2 { margin: 0; font-size: 18px; }
+    .badge { font-size: 13px; color: #1e3a8a; background: #dbeafe; border: 1px solid #bfdbfe; border-radius: 999px; padding: 6px 10px; }
+
+    .step { display:none; }
+    .step.active { display:block; }
+    .subtitle { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
+    .hint {
+      border: 1px solid var(--warn-line);
+      background: var(--warn-bg);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .field { width:100%; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; margin-bottom:10px; }
+    textarea.field { min-height: 100px; resize: vertical; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+    .btn { border:0; border-radius:10px; padding:9px 14px; font-weight:600; cursor:pointer; }
+    .btn-primary { background: var(--primary); color:#fff; }
+    .btn-primary:hover { background: var(--primary-2); }
+    .btn-success { background: var(--success); color:#fff; }
+    .btn-ghost { background:#f3f4f6; border:1px solid #e5e7eb; color:#111827; }
+    .btn-mini { padding: 4px 8px; font-size: 12px; }
+    .btn:disabled { opacity:.55; cursor:not-allowed; }
+
+    .bar { height:10px; background:#eef2ff; border:1px solid #dbeafe; border-radius:999px; overflow:hidden; margin-bottom:10px; }
+    .bar>div { height:100%; width:0%; background: linear-gradient(90deg, #22c55e, #16a34a); transition: width .25s ease; }
+    audio { width: min(560px, 100%); margin-bottom: 10px; }
+
+    .file-list {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f8fafc;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+    .file-item { display:flex; justify-content:space-between; gap:8px; padding: 6px 0; border-bottom: 1px dashed #e5e7eb; }
+    .file-item:last-child { border-bottom: 0; }
+    .file-meta { color: var(--muted); font-size: 12px; }
+
+    pre {
+      margin:0;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid #e5e7eb;
+      background:#f8fafc;
+      font-size:12px;
+      white-space:pre-wrap;
+      word-break:break-word;
+      max-height:220px;
+      overflow:auto;
+      line-height:1.4;
+    }
+    .danger-box { border-color: var(--danger-line); background: var(--danger-bg); color:#7f1d1d; }
+    .divider { border:0; border-top:1px solid #e5e7eb; margin:16px 0; }
+
+    .accent-help {
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .accent-box {
+      border:1px solid #e5e7eb;
+      border-radius:10px;
+      background:#f8fafc;
+      padding:10px;
+      font-size:13px;
+    }
+
+    @media (max-width: 960px){
+      body{padding:12px;}
+      .steps{grid-template-columns:1fr 1fr;}
+      .accent-help { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<main class="shell">
+  <section class="hero">
+    <h1>Мастер озвучки (XTTS-v2)</h1>
+    <p>Простой сценарий: загрузите аудио голоса, сделайте preview, при желании улучшите профиль и получите финальный синтез.</p>
+    <div class="steps">
+      <div class="pill" id="step-pill-1">1. Загрузка аудио</div>
+      <div class="pill" id="step-pill-2">2. Preview</div>
+      <div class="pill" id="step-pill-3">3. Улучшение (опц.)</div>
+      <div class="pill" id="step-pill-4">4. Синтез текста</div>
+      <div class="pill" id="step-pill-5">5. Результат</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="head">
+      <h2>Рабочая область</h2>
+      <div id="progress" class="badge">Шаг 1/5</div>
+    </div>
+
+    <div class="row" style="margin-bottom:14px">
+      <button class="btn btn-ghost" onclick="resetStepState()">Сбросить текущий шаг</button>
+      <span class="subtitle">Если шаг завис из-за старой задачи — очистите его состояние и повторите.</span>
+    </div>
+
+    <div id="s1" class="step active">
+      <h3>Шаг 1. Загрузите образцы голоса</h3>
+      <p class="subtitle">Добавьте несколько аудио одного человека. Это база, из которой модель будет копировать голос.</p>
+      <div class="hint"><b>Важно:</b> можно загрузить много файлов. Выберите файлы несколько раз — они добавятся в список ниже. Минимум 1 файл, лучше 3–10.</div>
+      <input class="field" id="vname" placeholder="Название голоса (например, Андрей — основной)">
+      <input class="field" type="file" id="samples" multiple accept="audio/*" onchange="addSelectedFiles()">
+      <div class="file-list">
+        <div id="sample_summary" class="file-meta">Файлы не добавлены.</div>
+        <div id="sample_list"></div>
+      </div>
+      <div class="row">
+        <button class="btn btn-primary" onclick="createVoice()">Создать голос</button>
+        <button class="btn btn-success" id="n1" disabled onclick="go(2)">Далее: Preview →</button>
+      </div>
+      <pre id="s1o"></pre>
+    </div>
+
+    <div id="s2" class="step">
+      <h3>Шаг 2. Проверьте preview</h3>
+      <p class="subtitle">Проверьте, как звучит голос до финального синтеза.</p>
+      <div class="hint">Если качество не нравится: вернитесь на шаг 1, добавьте/замените более чистые записи, затем повторите preview.</div>
+      <textarea class="field" id="preview_text">Привет! Это быстрый тест.</textarea>
+      <div class="row">
+        <label>Режим ударений (preview)</label>
+        <select class="field" id="preview_accent_mode" style="max-width:280px">
+          <option value="auto_plus_overrides">Авто + мои overrides (рекомендуется)</option>
+          <option value="overrides_only">Только мои overrides (без авто)</option>
+          <option value="none">Без ударений</option>
+        </select>
+      </div>
+      <div class="row">
+        <button class="btn btn-ghost" onclick="go(1)">← Назад</button>
+        <button class="btn btn-primary" onclick="preview()">Сделать preview</button>
+        <button class="btn btn-success" id="n2" disabled onclick="go(3)">Далее: Улучшение →</button>
+      </div>
+      <div class="bar"><div id="p2"></div></div>
+      <audio id="a2" controls></audio>
+      <pre id="s2o"></pre>
+    </div>
+
+    <div id="s3" class="step">
+      <h3>Шаг 3. Улучшение профиля (необязательно)</h3>
+      <p class="subtitle">Профиль — это сохранённая настройка, вычисленная из ваших аудио, чтобы голос был стабильнее на длинных текстах.</p>
+      <div class="hint">Можно пропустить этот шаг и сразу перейти к синтезу. Но для длинных сказок/историй обычно лучше сначала создать профиль.</div>
+      <input class="field" id="pname" value="xtts-profile">
+      <div class="row">
+        <button class="btn btn-ghost" onclick="go(2)">← Назад</button>
+        <button class="btn btn-primary" onclick="train()">Создать/улучшить профиль</button>
+        <button class="btn btn-success" id="n3" onclick="go(4)">Далее: Синтез →</button>
+      </div>
+      <div class="bar"><div id="p3"></div></div>
+      <pre id="s3o"></pre>
+    </div>
+
+    <div id="s4" class="step">
+      <h3>Шаг 4. Синтез вашего текста</h3>
+      <p class="subtitle">Вставьте текст и задайте параметры. Можно синтезировать стих, сказку или любой другой текст.</p>
+      <textarea class="field" id="ttstext" rows="8" placeholder="Вставьте ваш текст для озвучки"></textarea>
+      <div class="row">
+        <label>Режим</label>
+        <select class="field" id="mode" style="max-width:180px"><option value="story">story (проза)</option><option value="poem">poem (стих)</option></select>
+        <label>Формат</label>
+        <select class="field" id="fmt" style="max-width:150px"><option>wav</option><option>mp3</option></select>
+        <label>Скорость</label>
+        <input class="field" id="speed" type="number" step="0.05" min="0.5" max="1.5" value="1.0" style="max-width:120px">
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="acc" checked> Включить автоударения</label>
+        <label><input type="checkbox" id="ovr" checked> Учитывать ручные overrides</label>
+      </div>
+      <div class="row">
+        <label>Режим ударений</label>
+        <select class="field" id="accent_mode" style="max-width:320px">
+          <option value="auto_plus_overrides">Авто + мои overrides (рекомендуется)</option>
+          <option value="overrides_only">Только мои overrides (без авто)</option>
+          <option value="none">Без ударений</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>Подсказка ударений для XTTS</label>
+        <select class="field" id="stress_hint_mode" style="max-width:360px">
+          <option value="none">Без доп. подсказки (рекомендуется по умолчанию)</option>
+          <option value="plus">Только + перед ударной гласной (эксперимент)</option>
+          <option value="plus_and_acute">+ и знак ударения (эксперимент)</option>
+        </select>
+      </div>
+      <div class="hint">Важно: XTTS-v2 не гарантирует строгое соблюдение ударения в русском. Этот параметр — экспериментальная подсказка модели.</div>
+      <div class="hint">После завершения задачи ниже показывается «Подготовленный текст» — именно он отправляется в синтез и помогает проверить, применились ли ударения.</div>
+      <div class="row">
+        <button class="btn btn-ghost" onclick="go(3)">← Назад</button>
+        <button class="btn btn-primary" onclick="renderTTS()">Озвучить текст</button>
+        <button class="btn btn-success" id="n4" disabled onclick="go(5)">Finish →</button>
+      </div>
+      <div class="bar"><div id="p4"></div></div>
+      <audio id="a4" controls></audio>
+      <pre id="s4o"></pre>
+      <pre id="prepared_text_out"></pre>
+    </div>
+
+    <div id="s5" class="step">
+      <h3>Шаг 5. Результат готов</h3>
+      <p class="subtitle">Если результат не устраивает — вернитесь назад, поправьте текст/ударения/профиль и синтезируйте заново.</p>
+      <pre id="sum"></pre>
+      <div class="row">
+        <button class="btn btn-ghost" onclick="go(4)">← Назад к синтезу</button>
+        <button class="btn btn-ghost" onclick="go(1)">Загрузить новые аудио</button>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3>Ручная правка ударений (для улучшения результата)</h3>
+    <p class="subtitle">Используйте это, если модель ставит ударение неправильно. Правка применяется в следующих рендерах.</p>
+    <div class="accent-help">
+      <div class="accent-box">
+        <b>Как вводить:</b><br>
+        <code>слово</code> → <code>сло́во</code> (с ударением)
+      </div>
+      <div class="accent-box">
+        <b>Пример:</b><br>
+        <code>замок</code> → <code>за́мок</code> или <code>замо́к</code><br>
+        <button class="btn btn-ghost btn-mini" onclick="fillAccentExample('замок','за́мок')">Вставить пример 1</button>
+        <button class="btn btn-ghost btn-mini" onclick="fillAccentExample('замок','замо́к')">Вставить пример 2</button>
+      </div>
+    </div>
+    <div class="row">
+      <input class="field" id="ow" placeholder="слово" style="max-width:220px">
+      <input class="field" id="oa" placeholder="форма с ударением" style="max-width:300px">
+      <button class="btn btn-ghost" onclick="saveOverride()">Сохранить override</button>
+    </div>
+    <pre id="ovrout"></pre>
+  </section>
+</main>
+
+<script>
+let st={session_id:null,current_step:1,selected_voice_id:null,selected_profile_id:null,active_preview_job_id:null,active_train_job_id:null,active_tts_job_id:null,preview_done:false,train_done:false,tts_done:false,preview_audio_url:null,tts_audio_url:null,last_error:null};
+let sampleQueue=[];
+function qs(id){return document.getElementById(id)}
+function go(n){st.current_step=n; saveSession(); render();}
+function render(){for(let i=1;i<=5;i++){qs('s'+i).classList.toggle('active',i===st.current_step);qs('step-pill-'+i).classList.toggle('active',i===st.current_step);} qs('progress').innerText=`Шаг ${st.current_step}/5`;}
+function setOut(id, msg, isError=false){const el=qs(id); el.innerText=msg; el.classList.toggle('danger-box', isError);}
+function fillAccentExample(w,a){qs('ow').value=w; qs('oa').value=a;}
+function bytesToMb(v){return (v/1024/1024).toFixed(2)+' MB';}
+function renderSampleList(){
+  const list=qs('sample_list');
+  const summary=qs('sample_summary');
+  list.innerHTML='';
+  if(!sampleQueue.length){summary.innerText='Файлы не добавлены.'; return;}
+  summary.innerText=`Добавлено файлов: ${sampleQueue.length}`;
+  sampleQueue.forEach((f, idx)=>{
+    const row=document.createElement('div');
+    row.className='file-item';
+    row.innerHTML=`<div><div>${f.name}</div><div class="file-meta">${bytesToMb(f.size)}</div></div><button class="btn btn-ghost btn-mini" onclick="removeSample(${idx})">Удалить</button>`;
+    list.appendChild(row);
+  });
+}
+function addSelectedFiles(){
+  const files=Array.from(qs('samples').files || []);
+  for(const f of files){
+    const key=`${f.name}_${f.size}_${f.lastModified}`;
+    const exists=sampleQueue.some(x=>`${x.name}_${x.size}_${x.lastModified}`===key);
+    if(!exists) sampleQueue.push(f);
+  }
+  qs('samples').value='';
+  renderSampleList();
+}
+function removeSample(idx){sampleQueue.splice(idx,1); renderSampleList();}
+async function api(url,opt){let r=await fetch(url,opt);let text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch{data={detail:text||'invalid response'}};if(!r.ok){throw new Error(data.error_text||data.detail||`HTTP ${r.status}`);}return data;}
+function renderPreparedText(job){
+  const prepared=(job.input_params&&job.input_params.prepared_text)||'';
+  const backend=(job.input_params&&job.input_params.backend_text)||'';
+  if(prepared){
+    let txt='Подготовленный текст (после правил ударений):\n'+prepared;
+    if(backend && backend!==prepared){
+      txt += '\n\nТекст, отправленный в XTTS (+ударения):\n'+backend;
+    }
+    setOut('prepared_text_out', txt);
+  }
+}
+async function loadSession(){
+  let sid=localStorage.getItem('session_id');
+  let j=await api('/v1/ui/session'+(sid?`?session_id=${sid}`:''));
+  st={...st,...j};
+  localStorage.setItem('session_id',st.id||st.session_id);
+  st.session_id=st.id||st.session_id;
+  if(st.preview_text_draft)qs('preview_text').value=st.preview_text_draft;
+  if(st.tts_text_draft)qs('ttstext').value=st.tts_text_draft;
+  if(st.mode)qs('mode').value=st.mode;
+  if(st.format)qs('fmt').value=st.format;
+  if(st.speed)qs('speed').value=st.speed;
+  if(st.selected_voice_id)qs('n1').disabled=false;
+  if(st.preview_done&&st.preview_audio_url){qs('a2').src=st.preview_audio_url;qs('n2').disabled=false;}
+  if(st.train_done)qs('n3').disabled=false;
+  if(st.tts_done&&st.tts_audio_url){qs('a4').src=st.tts_audio_url;qs('n4').disabled=false;setOut('sum',`voice=${st.selected_voice_id}
+profile=${st.selected_profile_id}
+result=${st.tts_audio_url}`);}
+  if(st.last_error){const out=qs('s'+Math.min(4,Math.max(1,st.current_step))+'o'); if(out){out.innerText=st.last_error; out.classList.add('danger-box');}}
+  if(st.active_preview_job_id)poll(st.active_preview_job_id,'2');
+  if(st.active_train_job_id)poll(st.active_train_job_id,'3');
+  if(st.active_tts_job_id)poll(st.active_tts_job_id,'4');
+  render(); renderSampleList();
+}
+async function saveSession(extra={}){st={...st,...extra}; await api('/v1/ui/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(st)}); localStorage.setItem('session_id',st.session_id||st.id||'');}
+async function createVoice(){try{const files=sampleQueue.length?sampleQueue:Array.from(qs('samples').files||[]); if(!files.length) throw new Error('Добавьте хотя бы один аудиофайл. Лучше 3–10.'); const fd=new FormData(); fd.append('name',qs('vname').value||'my-voice'); fd.append('description','wizard'); for(const f of files)fd.append('samples',f); let r=await fetch('/v1/voices',{method:'POST',body:fd}); let txt=await r.text(); let j={}; try{j=txt?JSON.parse(txt):{};}catch{j={detail:txt||'invalid response'}}; if(!r.ok)throw new Error(j.detail||j.error_text||`HTTP ${r.status}`); st.selected_voice_id=j.voice_id; setOut('s1o',JSON.stringify(j,null,2)); qs('n1').disabled=false; await saveSession({selected_voice_id:j.voice_id,current_step:1,last_error:null});}catch(e){setOut('s1o',e.message,true);}}
+async function preview(){
+  try{
+    const payload={
+      text:qs('preview_text').value,
+      accent_mode:qs('preview_accent_mode').value,
+      use_accenting:qs('preview_accent_mode').value!=='none',
+      use_user_overrides:true,
+      stress_hint_mode:qs('stress_hint_mode').value,
+    };
+    let j=await api(`/v1/voices/${st.selected_voice_id}/preview`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    setOut('s2o',JSON.stringify(j,null,2));
+    await saveSession({active_preview_job_id:j.job_id,preview_text_draft:payload.text,last_error:null});
+    poll(j.job_id,'2');
+  }catch(e){setOut('s2o',e.message,true);}
+}
+async function train(){try{let j=await api(`/v1/voices/${st.selected_voice_id}/train`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile_name:qs('pname').value})}); setOut('s3o',JSON.stringify(j,null,2)); await saveSession({active_train_job_id:j.job_id,last_error:null}); poll(j.job_id,'3');}catch(e){setOut('s3o',e.message,true);}}
+async function renderTTS(){
+  let payload={voice_id:st.selected_voice_id,profile_id:st.selected_profile_id,text:qs('ttstext').value,mode:qs('mode').value,format:qs('fmt').value,speed:parseFloat(qs('speed').value),use_accenting:qs('acc').checked,use_user_overrides:qs('ovr').checked,accent_mode:qs('accent_mode').value,stress_hint_mode:qs('stress_hint_mode').value};
+  try{let j=await api('/v1/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); setOut('s4o',JSON.stringify(j,null,2)); setOut('prepared_text_out',''); await saveSession({active_tts_job_id:j.job_id,tts_text_draft:payload.text,mode:payload.mode,format:payload.format,speed:payload.speed,use_accenting:payload.use_accenting,use_user_overrides:payload.use_user_overrides,last_error:null}); poll(j.job_id,'4');}catch(e){setOut('s4o',e.message,true);}}
+async function poll(jobId,step){let timer=setInterval(async()=>{try{let j=await api('/v1/jobs/'+jobId); qs('p'+step).style.width=(j.progress||0)+'%'; if(j.status==='done'){clearInterval(timer); if(step==='2'){const url='/media/outputs/'+jobId+'.wav'; qs('a2').src=url; qs('n2').disabled=false; await saveSession({active_preview_job_id:null,preview_done:true,preview_audio_url:url,last_error:null});}
+if(step==='3'){let p=await api(`/v1/voices/${st.selected_voice_id}/profiles`); if(p.length){st.selected_profile_id=p[p.length-1].id; await saveSession({selected_profile_id:st.selected_profile_id,active_train_job_id:null,train_done:true,last_error:null}); qs('n3').disabled=false;}}
+if(step==='4'){let ext=qs('fmt').value; const url='/media/outputs/'+jobId+'.'+ext; qs('a4').src=url; qs('n4').disabled=false; renderPreparedText(j); setOut('sum',`voice=${st.selected_voice_id}
+profile=${st.selected_profile_id}
+result=${url}`); await saveSession({active_tts_job_id:null,tts_done:true,tts_audio_url:url,last_error:null});}}
+if(j.status==='failed'){clearInterval(timer); const msg=j.error_text||'job failed'; setOut('s'+step+'o',msg,true); let reset={}; if(step==='2')reset={active_preview_job_id:null}; if(step==='3')reset={active_train_job_id:null}; if(step==='4')reset={active_tts_job_id:null}; await saveSession({...reset,last_error:msg});}}catch(e){clearInterval(timer); setOut('s'+step+'o',e.message,true);}},1500)}
+async function resetStepState(){if(st.current_step===2){await saveSession({active_preview_job_id:null,last_error:null}); setOut('s2o',''); qs('p2').style.width='0%';} if(st.current_step===3){await saveSession({active_train_job_id:null,last_error:null}); setOut('s3o',''); qs('p3').style.width='0%';} if(st.current_step===4){await saveSession({active_tts_job_id:null,last_error:null}); setOut('s4o',''); qs('p4').style.width='0%';}}
+async function saveOverride(){try{if(!qs('ow').value||!qs('oa').value) throw new Error('Заполните оба поля: слово и форму с ударением.'); let j=await api('/v1/accent-overrides?word='+encodeURIComponent(qs('ow').value)+'&accented='+encodeURIComponent(qs('oa').value),{method:'POST'}); setOut('ovrout','Сохранено!\n'+JSON.stringify(j,null,2));}catch(e){setOut('ovrout',e.message,true);}}
+loadSession().catch((e)=>{setOut('s1o','Ошибка восстановления сессии: '+e.message,true); render(); renderSampleList();});
+</script>
+</body>
+</html>
