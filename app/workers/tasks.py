@@ -49,9 +49,9 @@ def run_preview(self, job_id: str, voice_id: str, text: str):
         refs = _profile_refs(db, voice_id)
         if not refs:
             raise RuntimeError('No reference samples for preview')
-        out_dir = Path(settings.outputs_dir) / voice_id
+        out_dir = Path(settings.outputs_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
-        output = str(out_dir / f'preview_{job_id}.wav')
+        output = str(out_dir / f'{job_id}.wav')
         _get_tts().tts_to_file(text=text, output_wav=output, speed=1.0, speaker_wavs=refs)
         job.status = JobStatus.done
         job.progress = 100

@@ -32,7 +32,9 @@ def concat_with_pauses(chunks: list[str], output: str, line_pause_ms: int = 220,
             merged += AudioSegment.silent(duration=stanza_pause_ms)
             continue
         seg = AudioSegment.from_file(chunk)
-        merged = merged.append(seg, crossfade=40 if len(seg) > 80 else 0)
+        # pydub requires crossfade <= both appended segments.
+        crossfade = min(40, len(seg), len(merged))
+        merged = merged.append(seg, crossfade=max(crossfade, 0))
         merged += AudioSegment.silent(duration=line_pause_ms)
     merged.export(output, format=Path(output).suffix.lstrip('.'))
     return output
