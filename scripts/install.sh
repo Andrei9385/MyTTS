@@ -118,7 +118,7 @@ import importlib
 import sys
 
 print(f"python={sys.version.split()[0]}")
-for module_name in ("numpy", "pandas", "TTS"):
+for module_name in ("numpy", "pandas", "TTS", "transformers"):
     module = importlib.import_module(module_name)
     print(f"{module_name}={getattr(module, '__version__', 'unknown')}")
 PY
