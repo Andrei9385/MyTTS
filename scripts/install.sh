@@ -22,20 +22,19 @@ apt-get install -y software-properties-common curl git rsync ffmpeg redis-server
 
 PY_BIN="python3.11"
 if ! command -v "$PY_BIN" >/dev/null 2>&1; then
-  log "Trying to install Python 3.11 for better dependency compatibility"
+  log "Trying to install Python 3.11 for XTTS/Coqui compatibility"
   if apt-cache show python3.11 >/dev/null 2>&1; then
     apt-get install -y python3.11 python3.11-venv || true
   else
-    log "Python 3.11 packages are unavailable in current APT sources, skipping"
+    log "Python 3.11 packages are unavailable in current APT sources, trying deadsnakes PPA"
+    add-apt-repository -y ppa:deadsnakes/ppa || true
+    apt-get update || true
+    apt-get install -y python3.11 python3.11-venv || true
   fi
 fi
 if ! command -v "$PY_BIN" >/dev/null 2>&1; then
-  PY_BIN="python3.12"
-  apt-get install -y python3.12 python3.12-venv || true
-fi
-if ! command -v "$PY_BIN" >/dev/null 2>&1; then
-  log "python3.11/3.12 not found, fallback to python3"
-  PY_BIN="python3"
+  log "ERROR: Python 3.11 is required for TTS==0.22.0 (XTTS-v2). Aborting instead of downgrading backend."
+  exit 1
 fi
 
 id -u voiceai >/dev/null 2>&1 || useradd --system --create-home --shell /bin/bash voiceai
