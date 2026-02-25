@@ -6,6 +6,21 @@ import torch
 from pydub import AudioSegment
 
 
+
+
+def _ensure_torch_load_compat() -> None:
+    """Force trusted local XTTS checkpoints to load with weights_only=False on torch>=2.6."""
+    original_load = getattr(torch, 'load', None)
+    if original_load is None or getattr(original_load, '_voiceai_patched', False):
+        return
+
+    def _patched_torch_load(*args, **kwargs):
+        kwargs.setdefault('weights_only', False)
+        return original_load(*args, **kwargs)
+
+    _patched_torch_load._voiceai_patched = True
+    torch.load = _patched_torch_load
+
 def _ensure_transformers_compat() -> None:
     """Patch Transformers API differences required by TTS XTTS loader."""
     try:
@@ -32,6 +47,7 @@ class XTTSBackend:
     def _load(self):
         if self.model is not None:
             return self.model
+        _ensure_torch_load_compat()
         _ensure_transformers_compat()
         from TTS.api import TTS
 

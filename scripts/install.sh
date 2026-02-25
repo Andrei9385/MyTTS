@@ -134,8 +134,9 @@ importlib.import_module('app.workers.tasks')
 try:
     from transformers import BeamSearchScorer  # noqa: F401
 except Exception:
-    from app.services.tts_backend import _ensure_transformers_compat
+    from app.services.tts_backend import _ensure_torch_load_compat, _ensure_transformers_compat
 
+    _ensure_torch_load_compat()
     _ensure_transformers_compat()
     from transformers import BeamSearchScorer  # noqa: F401
 print('preflight import ok')
