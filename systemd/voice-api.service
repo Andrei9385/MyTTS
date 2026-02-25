@@ -1,0 +1,17 @@
+[Unit]
+Description=Voice AI FastAPI service
+After=network.target redis-server.service postgresql.service
+
+[Service]
+User=voiceai
+Group=voiceai
+WorkingDirectory=/opt/voice-ai/app
+EnvironmentFile=/opt/voice-ai/config/.env
+ExecStart=/opt/voice-ai/.venv/bin/uvicorn app.api.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
