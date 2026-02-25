@@ -1,0 +1,18 @@
+[Unit]
+Description=Voice AI Celery render worker
+After=network.target redis-server.service postgresql.service
+
+[Service]
+User=voiceai
+Group=voiceai
+WorkingDirectory=/opt/voice-ai/app
+EnvironmentFile=/opt/voice-ai/config/.env
+Environment=COQUI_TOS_AGREED=1
+ExecStart=/opt/voice-ai/.venv/bin/python -m celery -A app.workers.celery_app.celery_app worker -Q render -n render@%h --loglevel=INFO
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
