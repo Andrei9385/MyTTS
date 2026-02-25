@@ -67,28 +67,47 @@ class RussianTextFrontend:
         return [line if line.strip() else '__STANZA_BREAK__' for line in lines]
 
     def apply_accents(self, text: str, use_user_overrides: bool = True) -> str:
-        # already manually accent-marked words are preserved by token replacement
-        tokens = re.findall(r'[А-Яа-яЁё-]+|[^А-Яа-яЁё-]+', text)
+        # Keep user/manual accents with highest priority and only accentize the rest.
+        word_re = r'[А-Яа-яЁё\u0301-]+'
+        tokens = re.findall(r'[А-Яа-яЁё\u0301-]+|[^А-Яа-яЁё\u0301-]+', text)
+        protected: dict[str, str] = {}
         out = []
+
         for token in tokens:
-            if not re.match(r'[А-Яа-яЁё-]+$', token):
+            if not re.fullmatch(word_re, token):
                 out.append(token)
                 continue
+
+            low = token.replace('́', '').lower()
+            replacement = None
+
+            # 1) Manual accents in input text always win.
             if '́' in token:
+                replacement = token
+            # 2) User overrides have priority over auto accenting.
+            elif use_user_overrides and low in self.overrides:
+                replacement = self.overrides[low]
+
+            if replacement is None:
                 out.append(token)
                 continue
-            low = token.lower()
-            if use_user_overrides and low in self.overrides:
-                out.append(self.overrides[low])
-                continue
-            out.append(token)
+
+            key = f'__ACCENT_{len(protected)}__'
+            protected[key] = replacement
+            out.append(key)
+
         joined = ''.join(out)
         if self._accent_callable is None:
-            return joined
-        try:
-            return self._accent_callable(joined)
-        except Exception:
-            return joined
+            result = joined
+        else:
+            try:
+                result = self._accent_callable(joined)
+            except Exception:
+                result = joined
+
+        for key, value in protected.items():
+            result = result.replace(key, value)
+        return result
 
     def preprocess(self, text: str, use_accenting: bool, use_user_overrides: bool) -> str:
         text = self._normalize_numbers(text)
